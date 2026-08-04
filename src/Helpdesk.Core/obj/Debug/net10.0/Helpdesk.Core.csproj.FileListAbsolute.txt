@@ -1,0 +1,12 @@
+/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/bin/Debug/net10.0/Helpdesk.Core.deps.json
+/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/bin/Debug/net10.0/Helpdesk.Core.dll
+/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/bin/Debug/net10.0/Helpdesk.Core.pdb
+/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/obj/Debug/net10.0/Helpdesk.Core.GeneratedMSBuildEditorConfig.editorconfig
+/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/obj/Debug/net10.0/Helpdesk.Core.AssemblyInfoInputs.cache
+/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/obj/Debug/net10.0/Helpdesk.Core.AssemblyInfo.cs
+/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/obj/Debug/net10.0/Helpdesk.Core.csproj.CoreCompileInputs.cache
+/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/obj/Debug/net10.0/Helpdesk.Core.sourcelink.json
+/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/obj/Debug/net10.0/Helpdesk.Core.dll
+/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/obj/Debug/net10.0/refint/Helpdesk.Core.dll
+/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/obj/Debug/net10.0/Helpdesk.Core.pdb
+/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/obj/Debug/net10.0/ref/Helpdesk.Core.dll
