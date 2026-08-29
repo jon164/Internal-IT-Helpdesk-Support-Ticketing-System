@@ -1,0 +1,42 @@
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.user
+*.suo
+
+# Test results
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+coverage/
+*.opencover.xml
+
+# Node / frontend
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+
+# Local database and its journals
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Editor and OS noise
+.vs/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Secrets — never commit these
+appsettings.*.local.json
+.env
+.env.*
+!.env.example
