@@ -1,6 +1,141 @@
-@Helpdesk.Api_HostAddress = http://localhost:5062
+@host = http://localhost:5099
 
-GET {{Helpdesk.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+# Identity is supplied by header. The role is read from the database record, never from the request,
+# so changing this header changes who you are, not what you are allowed to do.
+@requester = user-01
+@technician = tech-nikau
+@otherTechnician = tech-raj
+@teamLead = lead-maia
 
-###
+### Liveness
+GET {{host}}/api/health
+
+### Accounts available in the role switcher
+GET {{host}}/api/users
+
+### Priority bands and their configured targets
+GET {{host}}/api/reference/priorities
+
+### Open queue, as the service manager
+GET {{host}}/api/tickets?openOnly=true
+X-User-Id: {{teamLead}}
+
+### Open queue, as a technician — restricted tickets they do not hold are absent
+GET {{host}}/api/tickets?openOnly=true
+X-User-Id: {{technician}}
+
+### A requester sees only their own tickets
+GET {{host}}/api/tickets
+X-User-Id: {{requester}}
+
+### Unassigned critical work
+GET {{host}}/api/tickets?priority=Critical&unassignedOnly=true&openOnly=true
+X-User-Id: {{teamLead}}
+
+### Raise a ticket
+POST {{host}}/api/tickets
+X-User-Id: {{requester}}
+Content-Type: application/json
+
+{
+  "title": "Concession POS terminal offline at gate 4",
+  "description": "The tenant cannot take card payments and the departure peak starts in an hour.",
+  "category": "Point of Sale",
+  "priority": "Critical"
+}
+
+### One ticket with its audit trail
+GET {{host}}/api/tickets/1
+X-User-Id: {{teamLead}}
+
+### Triage
+POST {{host}}/api/tickets/1/transition
+X-User-Id: {{technician}}
+Content-Type: application/json
+
+{ "status": "Triaged" }
+
+### Self-assign
+POST {{host}}/api/tickets/1/assign
+X-User-Id: {{technician}}
+Content-Type: application/json
+
+{ "technicianId": "tech-nikau" }
+
+### Refused: a technician cannot assign work to a colleague (403)
+POST {{host}}/api/tickets/1/assign
+X-User-Id: {{technician}}
+Content-Type: application/json
+
+{ "technicianId": "tech-raj" }
+
+### Start work — this stops the response clock
+POST {{host}}/api/tickets/1/transition
+X-User-Id: {{technician}}
+Content-Type: application/json
+
+{ "status": "InProgress" }
+
+### Park the ticket — this suspends the resolution clock
+POST {{host}}/api/tickets/1/transition
+X-User-Id: {{technician}}
+Content-Type: application/json
+
+{ "status": "OnHold", "note": "Awaiting the tenant to reopen the till." }
+
+### Refused: resolving without notes (400)
+POST {{host}}/api/tickets/1/transition
+X-User-Id: {{technician}}
+Content-Type: application/json
+
+{ "status": "Resolved" }
+
+### Resolve with notes
+POST {{host}}/api/tickets/1/transition
+X-User-Id: {{technician}}
+Content-Type: application/json
+
+{ "status": "Resolved", "note": "Replaced the card reader and confirmed a test transaction." }
+
+### Refused: a technician cannot close (403)
+POST {{host}}/api/tickets/1/transition
+X-User-Id: {{technician}}
+Content-Type: application/json
+
+{ "status": "Closed" }
+
+### The requester closes
+POST {{host}}/api/tickets/1/transition
+X-User-Id: {{requester}}
+Content-Type: application/json
+
+{ "status": "Closed" }
+
+### Refused: a technician cannot reprioritise (403)
+POST {{host}}/api/tickets/2/priority
+X-User-Id: {{technician}}
+Content-Type: application/json
+
+{ "priority": "Critical", "justification": "Looks urgent to me" }
+
+### The service manager reprioritises, with a reason for the audit trail
+POST {{host}}/api/tickets/2/priority
+X-User-Id: {{teamLead}}
+Content-Type: application/json
+
+{ "priority": "Critical", "justification": "Tenant trading impact confirmed with the duty manager." }
+
+### Comment — a comment from support staff records first response
+POST {{host}}/api/tickets/2/comments
+X-User-Id: {{technician}}
+Content-Type: application/json
+
+{ "comment": "Attending site now; will update within the hour." }
+
+### Refused: reporting is closed to technicians (403)
+GET {{host}}/api/reports/summary
+X-User-Id: {{technician}}
+
+### Management report, last 30 days
+GET {{host}}/api/reports/summary
+X-User-Id: {{teamLead}}
