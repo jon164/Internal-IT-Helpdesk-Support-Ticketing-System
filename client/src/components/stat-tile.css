@@ -1,0 +1,97 @@
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  padding: 16px 18px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.stat-label {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.stat-value {
+  margin: 6px 0 0;
+  color: var(--text-primary);
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.stat-tile.is-hero .stat-value {
+  font-size: 46px;
+}
+
+.stat-hint {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/*
+ * The badge carries the state word and a glyph. Colour is applied to this line only — the value
+ * itself stays on the primary ink token, so a status hue never becomes the number's colour.
+ */
+.stat-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.stat-badge span[aria-hidden] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  color: var(--surface-1);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.tone-neutral .stat-badge {
+  color: var(--text-muted);
+}
+
+.tone-good .stat-badge {
+  color: var(--status-good-ink);
+}
+
+.tone-good .stat-badge span[aria-hidden] {
+  background: var(--status-good);
+}
+
+.tone-warning .stat-badge {
+  color: var(--text-secondary);
+}
+
+.tone-warning .stat-badge span[aria-hidden] {
+  background: var(--status-warning);
+  color: #0b0b0b;
+}
+
+.tone-serious .stat-badge {
+  color: var(--text-secondary);
+}
+
+.tone-serious .stat-badge span[aria-hidden] {
+  background: var(--status-serious);
+  color: #0b0b0b;
+}
+
+.tone-critical .stat-badge {
+  color: var(--status-critical);
+}
+
+.tone-critical .stat-badge span[aria-hidden] {
+  background: var(--status-critical);
+}
