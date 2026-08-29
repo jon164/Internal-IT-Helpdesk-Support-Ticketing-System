@@ -1,0 +1,203 @@
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dashboard-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dashboard-header h1 {
+  font-size: 22px;
+}
+
+.dashboard-subtitle {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+}
+
+/* Filters sit in one row above the charts, never between them. */
+.dashboard-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.segmented button {
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.segmented button.is-selected {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.link-button {
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+
+.link-button:hover {
+  color: var(--text-primary);
+}
+
+.dashboard-message {
+  padding: 40px 0;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.dashboard-notice {
+  padding: 18px 20px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--status-critical);
+  border-radius: var(--radius);
+}
+
+.dashboard-notice.is-forbidden {
+  border-left-color: var(--status-warning);
+}
+
+.dashboard-notice h2 {
+  font-size: 15px;
+}
+
+.dashboard-notice p {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+}
+
+.dashboard-notice-detail {
+  color: var(--text-muted) !important;
+  font-size: 13px;
+}
+
+.tile-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+/* The headline figure earns twice the width of the others. */
+.tile-grid > :first-child {
+  grid-column: span 2;
+}
+
+/*
+ * Two columns, not auto-fit. Three columns orphans the fourth panel on its own row and squeezes the
+ * category labels until they truncate — the labels are the chart's identity channel, so the layout
+ * gives them room rather than the other way round.
+ */
+.panel-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 860px) {
+  .panel-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.panel {
+  padding: 16px 18px 18px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.panel-header {
+  margin-bottom: 14px;
+}
+
+.panel-header h2 {
+  font-size: 15px;
+}
+
+.panel-header p {
+  margin: 3px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.table-panel {
+  overflow-x: auto;
+}
+
+.metrics-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.metrics-table th,
+.metrics-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--gridline);
+  text-align: left;
+}
+
+.metrics-table th {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.metrics-table td {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.metrics-table tr:last-child th,
+.metrics-table tr:last-child td {
+  border-bottom: none;
+}
+
+.dashboard-footer {
+  max-width: 78ch;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.dashboard-footer p {
+  margin: 0 0 8px;
+}
+
+@media (max-width: 720px) {
+  .tile-grid > :first-child {
+    grid-column: span 1;
+  }
+
+  .dashboard-header {
+    align-items: flex-start;
+  }
+}

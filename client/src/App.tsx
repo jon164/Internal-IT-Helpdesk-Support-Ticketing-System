@@ -1,122 +1,86 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { useEffect, useState } from 'react'
+import { api } from './api/client'
+import type { User } from './api/types'
+import { DashboardPage } from './pages/DashboardPage'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+/**
+ * Application shell.
+ *
+ * The role switcher is a prototype affordance, not authentication. It changes which identity the
+ * client claims; it does not grant anything. Every permission is decided by the server against that
+ * user's stored role, which is why switching to a technician and watching the dashboard get refused
+ * demonstrates something real rather than a hidden menu item.
+ */
+export default function App() {
+  const [users, setUsers] = useState<User[]>([])
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    api
+      .getUsers()
+      .then((loaded) => {
+        if (cancelled) return
+
+        setUsers(loaded)
+        // Open as the service manager: the dashboard is their view, and it is where a demo starts.
+        setCurrentUser(loaded.find((u) => u.role === 'TeamLead') ?? loaded[0] ?? null)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLoadError(
+            'Could not reach the API. Start it with: dotnet run --project src/Helpdesk.Api',
+          )
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="app">
+      <header className="app-bar">
+        <div className="app-identity">
+          <span className="app-mark" aria-hidden="true" />
+          <div>
+            <strong>IT Support Desk</strong>
+            <span className="app-context">Corporate systems</span>
+          </div>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
 
-      <div className="ticks"></div>
+        <label className="role-switcher">
+          <span>Viewing as</span>
+          <select
+            value={currentUser?.id ?? ''}
+            onChange={(event) =>
+              setCurrentUser(users.find((u) => u.id === event.target.value) ?? null)
+            }
+            disabled={users.length === 0}
+          >
+            {users.map((user) => (
+              <option key={user.id} value={user.id}>
+                {user.displayName} — {user.role === 'TeamLead' ? 'Service manager' : user.role}
+              </option>
+            ))}
+          </select>
+        </label>
+      </header>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      <main className="app-main">
+        {loadError && (
+          <div className="dashboard-notice" role="alert">
+            <h2>The API is not responding</h2>
+            <p>{loadError}</p>
+          </div>
+        )}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+        {currentUser && <DashboardPage currentUser={currentUser} />}
+      </main>
+    </div>
   )
 }
-
-export default App
