@@ -154,6 +154,50 @@ public sealed record MetricsDto(
     private static double? Round(double? value) => value is null ? null : Math.Round(value.Value, 1);
 }
 
+public sealed record BacklogTrendPointDto(
+    DateTimeOffset PeriodStart,
+    DateTimeOffset PeriodEnd,
+    int Raised,
+    int Resolved,
+    int UnresolvedAtEnd,
+    int NetChange);
+
+public sealed record BacklogAgeBucketDto(string Label, int Count);
+
+public sealed record BacklogReportDto(
+    DateTimeOffset From,
+    DateTimeOffset To,
+    IReadOnlyList<BacklogTrendPointDto> Trend,
+    int UnresolvedAtStart,
+    int UnresolvedNow,
+    int UnresolvedBreached,
+    int NetChange,
+    string Direction,
+    double? ClearanceRatePercent,
+    IReadOnlyList<BacklogAgeBucketDto> AgeBuckets,
+    double? OldestUnresolvedDays,
+    string? OldestUnresolvedReference,
+    IReadOnlyDictionary<string, int> UnresolvedByAssignee)
+{
+    public static BacklogReportDto FromReport(BacklogReport r) => new(
+        r.From,
+        r.To,
+        r.Trend
+            .Select(p => new BacklogTrendPointDto(
+                p.PeriodStart, p.PeriodEnd, p.Raised, p.Resolved, p.UnresolvedAtEnd, p.NetChange))
+            .ToList(),
+        r.UnresolvedAtStart,
+        r.UnresolvedNow,
+        r.UnresolvedBreached,
+        r.NetChange,
+        r.Direction.ToString(),
+        r.ClearanceRatePercent is null ? null : Math.Round(r.ClearanceRatePercent.Value, 1),
+        r.AgeBuckets.Select(b => new BacklogAgeBucketDto(b.Label, b.Count)).ToList(),
+        r.OldestUnresolvedDays is null ? null : Math.Round(r.OldestUnresolvedDays.Value, 1),
+        r.OldestUnresolvedReference,
+        r.UnresolvedByAssignee);
+}
+
 // --- Request bodies ------------------------------------------------------
 
 public sealed record TransitionRequestDto(string Status, string? Note);

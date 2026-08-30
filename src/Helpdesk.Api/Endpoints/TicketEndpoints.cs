@@ -370,5 +370,46 @@ public static class ReferenceEndpoints
             })
            .WithTags("Reports")
            .WithSummary("Volume, throughput and SLA attainment. Service manager only.");
+
+        app.MapGet("/api/reports/backlog", async (
+                HttpContext context,
+                TicketService service,
+                int? weeks,
+                CancellationToken ct) =>
+            {
+                if (ActorMiddleware.Current(context) is not { } actor)
+                {
+                    return Results.Json(
+                        new ProblemDto("Unauthenticated",
+                            $"Supply a known user in the {ActorMiddleware.HeaderName} header."),
+                        statusCode: StatusCodes.Status401Unauthorized);
+                }
+
+                var periods = weeks ?? 12;
+
+                if (periods is < 1 or > 52)
+                {
+                    return Results.BadRequest(new ProblemDto(
+                        "Invalid", "The number of weeks must be between 1 and 52."));
+                }
+
+                var to = DateTimeOffset.UtcNow;
+                var from = to.AddDays(-7 * periods);
+
+                var result = await service.GetBacklogAsync(from, to, periods, actor, ct);
+
+                if (result.Succeeded)
+                {
+                    return Results.Ok(BacklogReportDto.FromReport(result.Require()));
+                }
+
+                return result.Error == OperationError.Forbidden
+                    ? Results.Json(new ProblemDto("Forbidden", result.Message),
+                        statusCode: StatusCodes.Status403Forbidden)
+                    : Results.BadRequest(new ProblemDto("Invalid", result.Message));
+            })
+           .WithTags("Reports")
+           .WithSummary(
+                "Unresolved queue movement and ageing over the last N weeks. Service manager only.");
     }
 }

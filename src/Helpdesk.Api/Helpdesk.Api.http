@@ -139,3 +139,15 @@ X-User-Id: {{technician}}
 ### Management report, last 30 days
 GET {{host}}/api/reports/summary
 X-User-Id: {{teamLead}}
+
+### Refused: the backlog report is closed to technicians too (403)
+GET {{host}}/api/reports/backlog
+X-User-Id: {{technician}}
+
+### Backlog movement and ageing, last 8 weeks
+GET {{host}}/api/reports/backlog?weeks=8
+X-User-Id: {{teamLead}}
+
+### Refused: window out of range (400)
+GET {{host}}/api/reports/backlog?weeks=99
+X-User-Id: {{teamLead}}

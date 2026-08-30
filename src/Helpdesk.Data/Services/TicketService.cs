@@ -160,6 +160,50 @@ public sealed class TicketService
             _metrics.Calculate(tickets, from, to, _clock.UtcNow));
     }
 
+    /// <summary>
+    /// Backlog movement and ageing. Team lead only, on the same footing as the performance report.
+    /// </summary>
+    /// <param name="from">Start of the window.</param>
+    /// <param name="to">End of the window.</param>
+    /// <param name="periodCount">Number of equal periods to divide the window into.</param>
+    /// <param name="actor">Caller.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    public async Task<OperationResult<BacklogReport>> GetBacklogAsync(
+        DateTimeOffset from,
+        DateTimeOffset to,
+        int periodCount,
+        ActorContext actor,
+        CancellationToken cancellationToken = default)
+    {
+        if (!TicketAccessPolicy.CanViewReports(actor))
+        {
+            return OperationResult<BacklogReport>.Forbidden(
+                "Management reporting is restricted to the service manager.");
+        }
+
+        if (to <= from)
+        {
+            return OperationResult<BacklogReport>.Invalid(
+                "The end of the reporting period must be after its start.");
+        }
+
+        // Bounded so a malformed request cannot ask for tens of thousands of periods and turn a
+        // report into a denial of service.
+        if (periodCount is < 1 or > 52)
+        {
+            return OperationResult<BacklogReport>.Invalid(
+                "The number of periods must be between 1 and 52.");
+        }
+
+        var tickets = await _db.Tickets
+            .Include(t => t.HoldPeriods)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        return OperationResult<BacklogReport>.Success(
+            _metrics.CalculateBacklog(tickets, from, to, periodCount, _clock.UtcNow));
+    }
+
     // -- Writes -----------------------------------------------------------
 
     /// <summary>Raises a new ticket on behalf of the actor.</summary>
