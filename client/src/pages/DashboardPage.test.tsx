@@ -9,11 +9,12 @@ vi.mock('../api/client', async () => {
 
   return {
     ...actual,
-    api: { ...actual.api, getMetrics: vi.fn() },
+    api: { ...actual.api, getMetrics: vi.fn(), getBacklog: vi.fn() },
   }
 })
 
 const getMetrics = vi.mocked(api.getMetrics)
+const getBacklog = vi.mocked(api.getBacklog)
 
 const manager: User = {
   id: 'lead-maia',
@@ -136,6 +137,38 @@ describe('DashboardPage', () => {
     expect(await screen.findByText('Raised by category')).toBeInTheDocument()
     expect(screen.getByText('Network')).toBeInTheDocument()
     expect(screen.getByText('Printing')).toBeInTheDocument()
+  })
+
+  it('opens on the performance view and switches to the backlog view on request', async () => {
+    getMetrics.mockResolvedValue(metrics())
+    getBacklog.mockResolvedValue({
+      from: '2026-07-04T00:00:00Z',
+      to: '2026-08-29T00:00:00Z',
+      trend: [],
+      unresolvedAtStart: 28,
+      unresolvedNow: 24,
+      unresolvedBreached: 17,
+      netChange: -4,
+      direction: 'Steady',
+      clearanceRatePercent: 100,
+      ageBuckets: [],
+      oldestUnresolvedDays: null,
+      oldestUnresolvedReference: null,
+      unresolvedByAssignee: {},
+    })
+
+    const { default: userEvent } = await import('@testing-library/user-event')
+    const user = userEvent.setup()
+
+    render(<DashboardPage currentUser={manager} />)
+
+    expect(await screen.findByText('Resolution attainment')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Backlog' }))
+
+    expect(await screen.findByText('Unresolved right now')).toBeInTheDocument()
+    // The two views answer different questions, so they must not be shown at once.
+    expect(screen.queryByText('Resolution attainment')).not.toBeInTheDocument()
   })
 
   it('offers every figure as a table for readers who cannot use the charts', async () => {

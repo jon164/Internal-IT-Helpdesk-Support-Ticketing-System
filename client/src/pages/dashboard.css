@@ -21,8 +21,52 @@
   color: var(--text-muted);
 }
 
-/* Filters sit in one row above the charts, never between them. */
-.dashboard-filters {
+/* Tabs sit in the page header; each view brings its own filter row underneath. */
+.tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.tabs button {
+  padding: 6px 16px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.tabs button.is-selected {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.view {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.view-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.view-range {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.filter-controls {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -107,8 +151,12 @@
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
-/* The headline figure earns twice the width of the others. */
-.tile-grid > :first-child {
+/*
+ * The headline figure earns twice the width of the others - but only where there are enough tiles
+ * for that to balance. With four tiles the span pushes the last one onto a row of its own, so the
+ * rule is scoped by sibling count rather than applied blindly.
+ */
+.tile-grid > :first-child:nth-last-child(n + 5) {
   grid-column: span 2;
 }
 
@@ -127,6 +175,10 @@
   .panel-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.panel.is-wide {
+  grid-column: 1 / -1;
 }
 
 .panel {
@@ -193,7 +245,7 @@
 }
 
 @media (max-width: 720px) {
-  .tile-grid > :first-child {
+  .tile-grid > :first-child:nth-last-child(n + 5) {
     grid-column: span 1;
   }
 
