@@ -1,29 +1,32 @@
 {
   "format": 1,
   "restore": {
-    "/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/tests/Helpdesk.Tests/Helpdesk.Tests.csproj": {}
+    "C:\\Software_Practice_Work\\Internal-IT-Helpdesk-Support-Ticketing-System\\tests\\Helpdesk.Tests\\Helpdesk.Tests.csproj": {}
   },
   "projects": {
-    "/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/Helpdesk.Core.csproj": {
+    "C:\\Software_Practice_Work\\Internal-IT-Helpdesk-Support-Ticketing-System\\src\\Helpdesk.Core\\Helpdesk.Core.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/Helpdesk.Core.csproj",
+        "projectUniqueName": "C:\\Software_Practice_Work\\Internal-IT-Helpdesk-Support-Ticketing-System\\src\\Helpdesk.Core\\Helpdesk.Core.csproj",
         "projectName": "Helpdesk.Core",
-        "projectPath": "/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/Helpdesk.Core.csproj",
-        "packagesPath": "/home/codespace/.nuget/packages/",
-        "outputPath": "/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/obj/",
+        "projectPath": "C:\\Software_Practice_Work\\Internal-IT-Helpdesk-Support-Ticketing-System\\src\\Helpdesk.Core\\Helpdesk.Core.csproj",
+        "packagesPath": "C:\\Users\\alkim\\.nuget\\packages\\",
+        "outputPath": "C:\\Software_Practice_Work\\Internal-IT-Helpdesk-Support-Ticketing-System\\src\\Helpdesk.Core\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/home/codespace/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\alkim\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net10.0": {
+            "framework": "net10.0",
             "targetAlias": "net10.0",
             "projectReferences": {}
           }
@@ -38,10 +41,11 @@
           "auditLevel": "low",
           "auditMode": "all"
         },
-        "SdkAnalysisLevel": "10.0.200"
+        "SdkAnalysisLevel": "10.0.400"
       },
       "frameworks": {
         "net10.0": {
+          "framework": "net10.0",
           "targetAlias": "net10.0",
           "imports": [
             "net461",
@@ -59,7 +63,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/10.0.200/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.400/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",
@@ -337,30 +341,33 @@
         }
       }
     },
-    "/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Data/Helpdesk.Data.csproj": {
+    "C:\\Software_Practice_Work\\Internal-IT-Helpdesk-Support-Ticketing-System\\src\\Helpdesk.Data\\Helpdesk.Data.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Data/Helpdesk.Data.csproj",
+        "projectUniqueName": "C:\\Software_Practice_Work\\Internal-IT-Helpdesk-Support-Ticketing-System\\src\\Helpdesk.Data\\Helpdesk.Data.csproj",
         "projectName": "Helpdesk.Data",
-        "projectPath": "/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Data/Helpdesk.Data.csproj",
-        "packagesPath": "/home/codespace/.nuget/packages/",
-        "outputPath": "/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Data/obj/",
+        "projectPath": "C:\\Software_Practice_Work\\Internal-IT-Helpdesk-Support-Ticketing-System\\src\\Helpdesk.Data\\Helpdesk.Data.csproj",
+        "packagesPath": "C:\\Users\\alkim\\.nuget\\packages\\",
+        "outputPath": "C:\\Software_Practice_Work\\Internal-IT-Helpdesk-Support-Ticketing-System\\src\\Helpdesk.Data\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/home/codespace/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\alkim\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net10.0": {
+            "framework": "net10.0",
             "targetAlias": "net10.0",
             "projectReferences": {
-              "/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/Helpdesk.Core.csproj": {
-                "projectPath": "/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/Helpdesk.Core.csproj"
+              "C:\\Software_Practice_Work\\Internal-IT-Helpdesk-Support-Ticketing-System\\src\\Helpdesk.Core\\Helpdesk.Core.csproj": {
+                "projectPath": "C:\\Software_Practice_Work\\Internal-IT-Helpdesk-Support-Ticketing-System\\src\\Helpdesk.Core\\Helpdesk.Core.csproj"
               }
             }
           }
@@ -375,10 +382,11 @@
           "auditLevel": "low",
           "auditMode": "all"
         },
-        "SdkAnalysisLevel": "10.0.200"
+        "SdkAnalysisLevel": "10.0.400"
       },
       "frameworks": {
         "net10.0": {
+          "framework": "net10.0",
           "targetAlias": "net10.0",
           "dependencies": {
             "Microsoft.EntityFrameworkCore.Design": {
@@ -408,7 +416,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/10.0.200/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.400/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",
@@ -686,33 +694,36 @@
         }
       }
     },
-    "/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/tests/Helpdesk.Tests/Helpdesk.Tests.csproj": {
+    "C:\\Software_Practice_Work\\Internal-IT-Helpdesk-Support-Ticketing-System\\tests\\Helpdesk.Tests\\Helpdesk.Tests.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/tests/Helpdesk.Tests/Helpdesk.Tests.csproj",
+        "projectUniqueName": "C:\\Software_Practice_Work\\Internal-IT-Helpdesk-Support-Ticketing-System\\tests\\Helpdesk.Tests\\Helpdesk.Tests.csproj",
         "projectName": "Helpdesk.Tests",
-        "projectPath": "/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/tests/Helpdesk.Tests/Helpdesk.Tests.csproj",
-        "packagesPath": "/home/codespace/.nuget/packages/",
-        "outputPath": "/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/tests/Helpdesk.Tests/obj/",
+        "projectPath": "C:\\Software_Practice_Work\\Internal-IT-Helpdesk-Support-Ticketing-System\\tests\\Helpdesk.Tests\\Helpdesk.Tests.csproj",
+        "packagesPath": "C:\\Users\\alkim\\.nuget\\packages\\",
+        "outputPath": "C:\\Software_Practice_Work\\Internal-IT-Helpdesk-Support-Ticketing-System\\tests\\Helpdesk.Tests\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/home/codespace/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\alkim\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net10.0": {
+            "framework": "net10.0",
             "targetAlias": "net10.0",
             "projectReferences": {
-              "/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/Helpdesk.Core.csproj": {
-                "projectPath": "/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/Helpdesk.Core.csproj"
+              "C:\\Software_Practice_Work\\Internal-IT-Helpdesk-Support-Ticketing-System\\src\\Helpdesk.Core\\Helpdesk.Core.csproj": {
+                "projectPath": "C:\\Software_Practice_Work\\Internal-IT-Helpdesk-Support-Ticketing-System\\src\\Helpdesk.Core\\Helpdesk.Core.csproj"
               },
-              "/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Data/Helpdesk.Data.csproj": {
-                "projectPath": "/workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Data/Helpdesk.Data.csproj"
+              "C:\\Software_Practice_Work\\Internal-IT-Helpdesk-Support-Ticketing-System\\src\\Helpdesk.Data\\Helpdesk.Data.csproj": {
+                "projectPath": "C:\\Software_Practice_Work\\Internal-IT-Helpdesk-Support-Ticketing-System\\src\\Helpdesk.Data\\Helpdesk.Data.csproj"
               }
             }
           }
@@ -727,10 +738,11 @@
           "auditLevel": "low",
           "auditMode": "all"
         },
-        "SdkAnalysisLevel": "10.0.200"
+        "SdkAnalysisLevel": "10.0.400"
       },
       "frameworks": {
         "net10.0": {
+          "framework": "net10.0",
           "targetAlias": "net10.0",
           "dependencies": {
             "MSTest": {
@@ -762,7 +774,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/10.0.200/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.400/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",

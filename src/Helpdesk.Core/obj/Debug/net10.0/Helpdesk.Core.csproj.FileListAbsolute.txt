@@ -10,3 +10,15 @@
 /workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/obj/Debug/net10.0/refint/Helpdesk.Core.dll
 /workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/obj/Debug/net10.0/Helpdesk.Core.pdb
 /workspaces/Internal-IT-Helpdesk-Support-Ticketing-System/src/Helpdesk.Core/obj/Debug/net10.0/ref/Helpdesk.Core.dll
+C:\Software_Practice_Work\Internal-IT-Helpdesk-Support-Ticketing-System\src\Helpdesk.Core\bin\Debug\net10.0\Helpdesk.Core.deps.json
+C:\Software_Practice_Work\Internal-IT-Helpdesk-Support-Ticketing-System\src\Helpdesk.Core\bin\Debug\net10.0\Helpdesk.Core.dll
+C:\Software_Practice_Work\Internal-IT-Helpdesk-Support-Ticketing-System\src\Helpdesk.Core\bin\Debug\net10.0\Helpdesk.Core.pdb
+C:\Software_Practice_Work\Internal-IT-Helpdesk-Support-Ticketing-System\src\Helpdesk.Core\obj\Debug\net10.0\Helpdesk.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\Software_Practice_Work\Internal-IT-Helpdesk-Support-Ticketing-System\src\Helpdesk.Core\obj\Debug\net10.0\Helpdesk.Core.AssemblyInfoInputs.cache
+C:\Software_Practice_Work\Internal-IT-Helpdesk-Support-Ticketing-System\src\Helpdesk.Core\obj\Debug\net10.0\Helpdesk.Core.AssemblyInfo.cs
+C:\Software_Practice_Work\Internal-IT-Helpdesk-Support-Ticketing-System\src\Helpdesk.Core\obj\Debug\net10.0\Helpdesk.Core.csproj.CoreCompileInputs.cache
+C:\Software_Practice_Work\Internal-IT-Helpdesk-Support-Ticketing-System\src\Helpdesk.Core\obj\Debug\net10.0\Helpdesk.Core.sourcelink.json
+C:\Software_Practice_Work\Internal-IT-Helpdesk-Support-Ticketing-System\src\Helpdesk.Core\obj\Debug\net10.0\Helpdesk.Core.dll
+C:\Software_Practice_Work\Internal-IT-Helpdesk-Support-Ticketing-System\src\Helpdesk.Core\obj\Debug\net10.0\refint\Helpdesk.Core.dll
+C:\Software_Practice_Work\Internal-IT-Helpdesk-Support-Ticketing-System\src\Helpdesk.Core\obj\Debug\net10.0\Helpdesk.Core.pdb
+C:\Software_Practice_Work\Internal-IT-Helpdesk-Support-Ticketing-System\src\Helpdesk.Core\obj\Debug\net10.0\ref\Helpdesk.Core.dll
