@@ -62,7 +62,9 @@ export function StatTile({
 
       {badge && (
         <p className="stat-badge">
-          <span aria-hidden="true">{glyph}</span>
+          {/* Rendered only when there is a glyph — an empty circle still occupies its width and
+              gap, which left neutral badges hanging in from the label above them. */}
+          {glyph && <span aria-hidden="true">{glyph}</span>}
           {badge}
         </p>
       )}

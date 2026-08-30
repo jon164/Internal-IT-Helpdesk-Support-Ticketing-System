@@ -96,6 +96,102 @@
   color: var(--text-muted);
 }
 
+/* --- Time series ------------------------------------------------------- */
+
+.ts-chart {
+  position: relative;
+}
+
+.ts-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.ts-gridline {
+  stroke: var(--gridline);
+  stroke-width: 1;
+}
+
+.ts-baseline {
+  stroke: var(--baseline);
+  stroke-width: 1;
+}
+
+.ts-axis-label {
+  fill: var(--text-muted);
+  font-size: 11px;
+}
+
+.ts-value-label {
+  fill: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.ts-line {
+  fill: none;
+  stroke: var(--seq-450);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+/* A ring of surface colour keeps a marker legible where it sits on the line. */
+.ts-marker {
+  fill: var(--seq-450);
+  stroke: var(--surface-1);
+  stroke-width: 2;
+}
+
+.ts-crosshair {
+  stroke: var(--text-muted);
+  stroke-dasharray: 3 3;
+  stroke-width: 1;
+}
+
+.ts-legend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.ts-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ts-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.ts-tooltip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.ts-tooltip strong {
+  color: var(--text-primary);
+}
+
+.ts-tooltip-hint {
+  color: var(--text-muted);
+}
+
 /* --- Attainment meter -------------------------------------------------- */
 
 .meter {

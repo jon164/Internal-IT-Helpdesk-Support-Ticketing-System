@@ -1,4 +1,11 @@
-import type { ApiProblem, MetricsSummary, SlaPolicy, TicketSummary, User } from './types'
+import type {
+  ApiProblem,
+  BacklogReport,
+  MetricsSummary,
+  SlaPolicy,
+  TicketSummary,
+  User,
+} from './types'
 
 /**
  * Thin wrapper over the API.
@@ -85,4 +92,11 @@ export const api = {
 
     return request<MetricsSummary>(`/reports/summary?${query}`, userId)
   },
+
+  /**
+   * Backlog movement over the last N weeks. Same 403 restriction as the performance report.
+   * The window is chosen server-side from the week count so both reports cannot drift apart.
+   */
+  getBacklog: (userId: string, weeks: number) =>
+    request<BacklogReport>(`/reports/backlog?weeks=${weeks}`, userId),
 }

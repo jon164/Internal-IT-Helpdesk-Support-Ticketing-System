@@ -91,6 +91,42 @@ export interface MetricsSummary {
   createdByCategory: Record<string, number>
 }
 
+export interface BacklogTrendPoint {
+  periodStart: string
+  periodEnd: string
+  raised: number
+  resolved: number
+  unresolvedAtEnd: number
+  netChange: number
+}
+
+export interface BacklogAgeBucket {
+  label: string
+  count: number
+}
+
+/**
+ * Whether the unresolved queue is growing.
+ *
+ * Distinct from {@link MetricsSummary}, which reports performance against targets. This reports
+ * direction of travel, which a single point-in-time figure cannot express.
+ */
+export interface BacklogReport {
+  from: string
+  to: string
+  trend: BacklogTrendPoint[]
+  unresolvedAtStart: number
+  unresolvedNow: number
+  unresolvedBreached: number
+  netChange: number
+  direction: 'Growing' | 'Steady' | 'Shrinking'
+  clearanceRatePercent: number | null
+  ageBuckets: BacklogAgeBucket[]
+  oldestUnresolvedDays: number | null
+  oldestUnresolvedReference: string | null
+  unresolvedByAssignee: Record<string, number>
+}
+
 export interface ApiProblem {
   error: 'Unauthenticated' | 'NotFound' | 'Forbidden' | 'Conflict' | 'Invalid'
   message: string

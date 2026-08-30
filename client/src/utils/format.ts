@@ -77,6 +77,34 @@ export function humaniseStatus(status: string): string {
   return spaced.charAt(0) + spaced.slice(1).toLowerCase()
 }
 
+/**
+ * An age in days, at a precision that matches how long the thing has been waiting.
+ *
+ * Something four hours old is reported in hours; something 148 days old is not reported as
+ * "148.4 days", because the fraction is noise at that scale.
+ */
+export function formatDays(days: number | null): string {
+  if (days === null) {
+    return '—'
+  }
+
+  if (days < 1) {
+    const hours = Math.round(days * 24)
+    return hours <= 1 ? 'under an hour' : `${hours} hours`
+  }
+
+  if (days < 10) {
+    return `${days.toFixed(1)} days`
+  }
+
+  return `${Math.round(days)} days`
+}
+
+/** Short axis label for a week, e.g. "4 Aug". */
+export function formatShortDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+}
+
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
     day: 'numeric',
