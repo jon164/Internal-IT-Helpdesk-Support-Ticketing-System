@@ -1,122 +1,250 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { useEffect, useState } from 'react'
 import './App.css'
+import { NoticeBanner } from './components/NoticeBanner'
+import { DashboardPage } from './pages/DashboardPage'
+import { FlightLookupPage } from './pages/FlightLookupPage'
+import { TicketsPage } from './pages/TicketsPage'
+import type { Notice, Role } from './types'
 
-function App() {
-  const [count, setCount] = useState(0)
+type Page = 'tickets' | 'flight' | 'dashboard'
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+const THEME_KEY = 'airport-helpdesk-theme'
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+const PAGE_LABELS: Record<Page, string> = {
+  tickets: 'Tickets',
+  flight: 'Flight lookup',
+  dashboard: 'Manager dashboard',
 }
 
-export default App
+export default function App() {
+  const [role, setRole] = useState<Role>('Airport Staff')
+  const [page, setPage] = useState<Page>('tickets')
+
+  // USER STORY: Light / Dark Mode
+  // The selected theme is saved so it stays after refreshing.
+  const [dark, setDark] = useState(() => {
+    const saved = localStorage.getItem(THEME_KEY)
+
+    if (saved === 'light') return false
+    if (saved === 'dark') return true
+
+    return true
+  })
+
+  const [notice, setNotice] = useState<Notice | null>(null)
+
+  useEffect(() => {
+    localStorage.setItem(
+      THEME_KEY,
+      dark ? 'dark' : 'light',
+    )
+  }, [dark])
+
+  function changeRole(next: Role) {
+    setRole(next)
+    setNotice(null)
+
+    if (next === 'IT Manager') {
+      setPage('dashboard')
+    } else if (page === 'dashboard') {
+      setPage('tickets')
+    }
+  }
+
+  function goTo(next: Page) {
+    setPage(next)
+    setNotice(null)
+  }
+
+  return (
+    <div className={dark ? 'app dark' : 'app light'}>
+      <aside className="sidebar">
+        <div className="brand sidebar-brand">
+          <div className="brand-mark">IT</div>
+
+          <div>
+            <h1>HelpDesk</h1>
+            <p>Airport Support Platform</p>
+          </div>
+        </div>
+
+        <div className="sidebar-section">
+          <div className="sidebar-title">
+            Navigation
+          </div>
+
+          <button
+            type="button"
+            className={
+              page === 'tickets'
+                ? 'nav active'
+                : 'nav'
+            }
+            onClick={() => goTo('tickets')}
+          >
+            <span className="nav-icon">▤</span>
+            <span>Tickets</span>
+          </button>
+
+          <button
+            type="button"
+            className={
+              page === 'flight'
+                ? 'nav active'
+                : 'nav'
+            }
+            onClick={() => goTo('flight')}
+          >
+            <span className="nav-icon">✈</span>
+            <span>Flight lookup</span>
+          </button>
+        </div>
+
+        <div className="sidebar-divider" />
+
+        <div className="sidebar-section">
+          <div className="sidebar-title">
+            Management
+          </div>
+
+          <button
+            type="button"
+            className={
+              page === 'dashboard'
+                ? 'nav active'
+                : 'nav'
+            }
+            onClick={() => goTo('dashboard')}
+          >
+            <span className="nav-icon">▥</span>
+            <span>Dashboard</span>
+
+            {role !== 'IT Manager' && (
+              <small>Manager</small>
+            )}
+          </button>
+        </div>
+
+        <div className="sidebar-spacer" />
+
+        <div className="sidebar-note">
+          <strong>Student prototype</strong>
+
+          <p>
+            Tickets, notes and attachments use the
+            backend. Badge identity, demo roles and
+            flight records use sample data because
+            real airport systems are unavailable.
+          </p>
+        </div>
+
+        <div className="sidebar-profile">
+          <div className="profile-avatar">
+            {role === 'Airport Staff'
+              ? 'AS'
+              : role === 'IT Technician'
+                ? 'IT'
+                : 'IM'}
+          </div>
+
+          <div>
+            <strong>{role}</strong>
+            <span>Demo workspace</span>
+          </div>
+        </div>
+      </aside>
+
+      <div className="workspace">
+        <header className="topbar">
+          <div className="topbar-title">
+            <span>Support Platform</span>
+            <strong>{PAGE_LABELS[page]}</strong>
+          </div>
+
+          <div className="topbar-actions">
+            <label className="role-switcher">
+              <span>Demo role</span>
+
+              <select
+                value={role}
+                onChange={event =>
+                  changeRole(
+                    event.target.value as Role,
+                  )
+                }
+              >
+                <option>Airport Staff</option>
+                <option>IT Technician</option>
+                <option>IT Manager</option>
+              </select>
+            </label>
+
+            {/* USER STORY: Light / Dark Mode */}
+            <button
+              type="button"
+              className="toggle-btn"
+              onClick={() =>
+                setDark(current => !current)
+              }
+              aria-label={
+                dark
+                  ? 'Switch to light mode'
+                  : 'Switch to dark mode'
+              }
+              title={
+                dark
+                  ? 'Switch to light mode'
+                  : 'Switch to dark mode'
+              }
+            >
+              <span
+                className="toggle-track"
+                aria-hidden="true"
+              >
+                <span className="toggle-thumb" />
+              </span>
+
+              <span
+                className="toggle-icon"
+                aria-hidden="true"
+              >
+                {dark ? '☾' : '☀'}
+              </span>
+
+              <span className="toggle-label">
+                {dark ? 'Dark' : 'Light'}
+              </span>
+            </button>
+          </div>
+        </header>
+
+        <main className="content">
+          {notice && (
+            <NoticeBanner
+              notice={notice}
+              onClose={() => setNotice(null)}
+            />
+          )}
+
+          {page === 'tickets' && (
+            <TicketsPage
+              role={role}
+              setNotice={setNotice}
+            />
+          )}
+
+          {page === 'flight' && (
+            <FlightLookupPage />
+          )}
+
+          {page === 'dashboard' && (
+            <DashboardPage
+              role={role}
+              setNotice={setNotice}
+            />
+          )}
+        </main>
+      </div>
+    </div>
+  )
+}
