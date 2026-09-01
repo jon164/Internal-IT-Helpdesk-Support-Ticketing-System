@@ -14,10 +14,31 @@ using Helpdesk.Data.Services;
 /// the client should not be coupled to the persistence model. Mapping is explicit so that what leaves
 /// the server is an inspectable decision rather than a side effect of a property being public.
 /// </remarks>
-public sealed record UserDto(string Id, string DisplayName, string Department, string Role)
+public sealed record UserDto(
+    string Id,
+    string DisplayName,
+    string Department,
+    string Role,
+    bool IsActive)
 {
     public static UserDto From(UserAccount user) =>
-        new(user.Id, user.DisplayName, user.Department, user.Role.ToString());
+        new(user.Id, user.DisplayName, user.Department, user.Role.ToString(), user.IsActive);
+}
+
+public sealed record UserAuditEntryDto(
+    int Id,
+    DateTimeOffset OccurredAt,
+    string EventType,
+    string SubjectUserId,
+    string SubjectDisplayName,
+    string ActorDisplayName,
+    string? FromRole,
+    string? ToRole,
+    string Reason)
+{
+    public static UserAuditEntryDto From(UserAuditEntry e) =>
+        new(e.Id, e.OccurredAt, e.EventType.ToString(), e.SubjectUserId, e.SubjectDisplayName,
+            e.ActorDisplayName, e.FromRole?.ToString(), e.ToRole?.ToString(), e.Reason);
 }
 
 public sealed record SlaPolicyDto(
@@ -207,6 +228,20 @@ public sealed record AssignRequestDto(string TechnicianId);
 public sealed record PriorityRequestDto(string Priority, string Justification);
 
 public sealed record CommentRequestDto(string Comment);
+
+/// <summary>
+/// Sign-in payload.
+/// </summary>
+/// <remarks>
+/// Carries an account identifier and no credential. The prototype does not authenticate — see the
+/// note on the session endpoint. The shape exists so that adding a password field later is a change
+/// to this record and its handler, not to every caller.
+/// </remarks>
+public sealed record SignInRequestDto(string UserId);
+
+public sealed record ChangeRoleRequestDto(string Role, string Reason);
+
+public sealed record SetActiveRequestDto(bool IsActive, string Reason);
 
 /// <summary>A refusal, in a shape the client can display directly.</summary>
 public sealed record ProblemDto(string Error, string Message);

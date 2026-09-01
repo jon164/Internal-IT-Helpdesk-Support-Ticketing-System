@@ -73,6 +73,7 @@ public static class SampleDataSeeder
     private const string TeamLeadId = "lead-maia";
     private const string TeamLeadName = "Maia Thornton";
 
+
     /// <summary>Short titles per category, so the queue reads like real work rather than filler.</summary>
     private static readonly Dictionary<string, string[]> TitlesByCategory = new()
     {
@@ -182,12 +183,84 @@ public static class SampleDataSeeder
     {
         if (await db.Tickets.AnyAsync(cancellationToken))
         {
+            // The database predates a later seeder change and may be missing accounts added since.
+            // Topping them up is safer than telling everybody to delete their local database, and
+            // avoids the confusing case where a documented demo account simply is not there.
+            await EnsureAccountsAsync(db, cancellationToken);
             return false;
         }
 
         Seed(db, now, ticketCount);
         await db.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    /// <summary>
+    /// Removes the short-lived separate administrator role from a database created before account
+    /// administration was folded into the service manager role.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Written as raw SQL and run before anything reads the tables through Entity Framework. It has
+    /// to be: the rows hold the text "Administrator" in a column now mapped to an enum that no longer
+    /// has that member, so an ordinary query would throw before any cleanup code could run.
+    /// </para>
+    /// <para>
+    /// A production system would use a proper migration. This is a prototype whose only affected rows
+    /// came from a seeded demonstration account, so removing them is honest rather than lossy.
+    /// </para>
+    /// </remarks>
+    /// <returns>True if anything needed cleaning up.</returns>
+    public static async Task<bool> RemoveRetiredAdministratorRoleAsync(
+        HelpdeskDbContext db,
+        CancellationToken cancellationToken = default)
+    {
+        var affected = await db.Database.ExecuteSqlRawAsync(
+            "DELETE FROM UserAuditEntries WHERE FromRole = 'Administrator' OR ToRole = 'Administrator'",
+            cancellationToken);
+
+        affected += await db.Database.ExecuteSqlRawAsync(
+            "DELETE FROM Users WHERE Id = 'admin-devon'",
+            cancellationToken);
+
+        // Anyone else promoted to the retired role becomes a service manager, which is what that
+        // role now means. Their audit history is left intact.
+        affected += await db.Database.ExecuteSqlRawAsync(
+            "UPDATE Users SET Role = 'TeamLead' WHERE Role = 'Administrator'",
+            cancellationToken);
+
+        return affected > 0;
+    }
+
+    /// <summary>
+    /// Adds any seeded account that is missing, leaving existing accounts untouched.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately additive: an administrator may have changed somebody's role or deactivated them
+    /// through the admin console, and a start-up routine must not quietly undo that.
+    /// </remarks>
+    public static async Task<int> EnsureAccountsAsync(
+        HelpdeskDbContext db,
+        CancellationToken cancellationToken = default)
+    {
+        var existing = await db.Users
+            .AsNoTracking()
+            .Select(u => u.Id)
+            .ToListAsync(cancellationToken);
+
+        var missing = BuildUsers()
+            .Where(u => !existing.Contains(u.Id))
+            .ToList();
+
+        if (missing.Count == 0)
+        {
+            return 0;
+        }
+
+        db.Users.AddRange(missing);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return missing.Count;
     }
 
     /// <summary>

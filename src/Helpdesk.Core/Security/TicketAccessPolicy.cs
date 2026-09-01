@@ -20,23 +20,29 @@ using Helpdesk.Core.Domain;
 public static class TicketAccessPolicy
 {
     /// <summary>Whether the actor may see this ticket exists at all.</summary>
+    /// <remarks>
+    /// Written as an exhaustive switch on the role rather than a chain of early returns with a
+    /// fall-through. The earlier form ended with the technician rule as its default, which meant
+    /// adding a role to the system silently granted it queue access — the failure mode where a
+    /// security control quietly widens because nobody edited it.
+    /// </remarks>
     public static bool CanView(Ticket ticket, ActorContext actor)
     {
         ArgumentNullException.ThrowIfNull(ticket);
         ArgumentNullException.ThrowIfNull(actor);
 
-        if (actor.IsTeamLead)
+        return actor.Role switch
         {
-            return true;
-        }
+            UserRole.TeamLead => true,
 
-        if (actor.IsRequester)
-        {
-            return actor.Owns(ticket);
-        }
+            UserRole.Requester => actor.Owns(ticket),
 
-        // Technician: the whole queue is visible, except restricted tickets they do not hold.
-        return ticket.Sensitivity != TicketSensitivity.Restricted || actor.IsAssignedTo(ticket);
+            // The whole queue is visible, except restricted tickets they do not hold.
+            UserRole.Technician =>
+                ticket.Sensitivity != TicketSensitivity.Restricted || actor.IsAssignedTo(ticket),
+
+            _ => false
+        };
     }
 
     /// <summary>
@@ -97,6 +103,17 @@ public static class TicketAccessPolicy
 
     /// <summary>Whether the actor may see management reporting. Team lead only.</summary>
     public static bool CanViewReports(ActorContext actor) => actor.IsTeamLead;
+
+    /// <summary>
+    /// Whether the actor may administer user accounts. Team lead only.
+    /// </summary>
+    /// <remarks>
+    /// The service manager holds both operational and account authority, because on a desk this size
+    /// there is nobody else to hold it. That concentration is a recognised weakness rather than an
+    /// oversight: the compensating controls are that every account change demands a reason and is
+    /// written to an immutable log, and that no account can be used to lock the system.
+    /// </remarks>
+    public static bool CanAdministerUsers(ActorContext actor) => actor.IsTeamLead;
 
     /// <summary>
     /// Filters a sequence down to what this actor is entitled to see. Used by the queue and list

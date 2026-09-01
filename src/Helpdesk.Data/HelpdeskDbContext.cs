@@ -41,6 +41,8 @@ public class HelpdeskDbContext : DbContext
 
     public DbSet<UserAccount> Users => Set<UserAccount>();
 
+    public DbSet<UserAuditEntry> UserAuditEntries => Set<UserAuditEntry>();
+
     /// <summary>Round-trips a <see cref="DateTimeOffset"/> through a sortable UTC string.</summary>
     public static readonly ValueConverter<DateTimeOffset, string> UtcInstant = new(
         value => value.ToUniversalTime().ToString(InstantFormat, CultureInfo.InvariantCulture),
@@ -71,6 +73,26 @@ public class HelpdeskDbContext : DbContext
             entity.Property(u => u.Department).HasMaxLength(120);
             entity.Property(u => u.Role).HasConversion<string>().HasMaxLength(32);
             entity.HasIndex(u => u.Role);
+        });
+
+        modelBuilder.Entity<UserAuditEntry>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.SubjectUserId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.SubjectDisplayName).HasMaxLength(120);
+            entity.Property(e => e.ActorId).IsRequired().HasMaxLength(64);
+            entity.Property(e => e.ActorDisplayName).HasMaxLength(120);
+            entity.Property(e => e.Reason).HasMaxLength(500);
+
+            entity.Property(e => e.EventType).HasConversion<string>().HasMaxLength(32);
+            entity.Property(e => e.FromRole).HasConversion<string>().HasMaxLength(32);
+            entity.Property(e => e.ToRole).HasConversion<string>().HasMaxLength(32);
+
+            entity.Property(e => e.OccurredAt).HasConversion(UtcInstant).HasMaxLength(33);
+
+            entity.HasIndex(e => e.SubjectUserId);
+            entity.HasIndex(e => e.OccurredAt);
         });
 
         modelBuilder.Entity<Ticket>(entity =>

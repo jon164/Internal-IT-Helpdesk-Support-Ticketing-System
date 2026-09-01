@@ -38,6 +38,7 @@ builder.Services.AddSingleton(sp => new SlaCalculator(
 builder.Services.AddSingleton(sp => new TicketMetricsCalculator(
     sp.GetRequiredService<SlaCalculator>()));
 builder.Services.AddScoped<TicketService>();
+builder.Services.AddScoped<UserAdminService>();
 
 // --- Web -----------------------------------------------------------------
 
@@ -70,6 +71,15 @@ using (var scope = app.Services.CreateScope())
     // system would use EF Core migrations instead; this is recorded as a known limitation.
     db.Database.EnsureCreated();
 
+    // Must run before anything queries the tables: a database created while the separate
+    // administrator role existed holds a role name the model no longer recognises.
+    if (await SampleDataSeeder.RemoveRetiredAdministratorRoleAsync(db))
+    {
+        app.Logger.LogInformation(
+            "Removed the retired separate administrator role; account administration now belongs "
+            + "to the service manager.");
+    }
+
     if (await SampleDataSeeder.EnsureSeededAsync(db, clock.UtcNow))
     {
         app.Logger.LogInformation(
@@ -86,8 +96,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseActorResolution();
 
+app.MapSessionEndpoints();
 app.MapTicketEndpoints();
 app.MapReferenceEndpoints();
+app.MapAdminEndpoints();
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }))
    .WithTags("Reference")

@@ -35,6 +35,11 @@ public enum TicketStatus
 /// <summary>
 /// The three user roles in scope for the prototype.
 /// </summary>
+/// <remarks>
+/// Account administration belongs to <see cref="TeamLead"/> rather than to a separate role. A
+/// four-person support desk does not employ a dedicated systems administrator; the team lead manages
+/// the accounts. Splitting the two would model an organisation this one is not.
+/// </remarks>
 public enum UserRole
 {
     Requester = 0,
@@ -68,4 +73,19 @@ public enum TicketEventType
     HoldEnded = 7,
     CommentAdded = 8,
     Reopened = 9
+}
+
+/// <summary>
+/// Categories of audited account-administration event.
+/// </summary>
+/// <remarks>
+/// Kept separate from <see cref="TicketEventType"/> because these events belong to an account, not a
+/// ticket. One of the quality failures this project addresses is that two former staff retained
+/// mailbox access unnoticed; an unbroken record of who changed whose access is the direct answer.
+/// </remarks>
+public enum UserEventType
+{
+    RoleChanged = 0,
+    Deactivated = 1,
+    Reactivated = 2
 }

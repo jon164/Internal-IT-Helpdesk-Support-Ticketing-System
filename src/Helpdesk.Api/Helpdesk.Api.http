@@ -6,6 +6,71 @@
 @technician = tech-nikau
 @otherTechnician = tech-raj
 @teamLead = lead-maia
+@administrator = admin-devon
+
+### Sign in — establishes an identity. NOTE: no credential is verified.
+POST {{host}}/api/session
+Content-Type: application/json
+
+{ "userId": "admin-devon" }
+
+### Refused: unknown account (401). Wording is identical for a deactivated account, by design.
+POST {{host}}/api/session
+Content-Type: application/json
+
+{ "userId": "no-such-account" }
+
+### Accounts, administrator only
+GET {{host}}/api/admin/users
+X-User-Id: {{administrator}}
+
+### Refused: the service manager is not an administrator (403)
+GET {{host}}/api/admin/users
+X-User-Id: {{teamLead}}
+
+### Separation of duties: the administrator cannot open a ticket (404)
+GET {{host}}/api/tickets/1
+X-User-Id: {{administrator}}
+
+### Separation of duties: nor read the reports (403)
+GET {{host}}/api/reports/summary
+X-User-Id: {{administrator}}
+
+### Refused: an administrator cannot change their own role (409)
+POST {{host}}/api/admin/users/admin-devon/role
+X-User-Id: {{administrator}}
+Content-Type: application/json
+
+{ "role": "Requester", "reason": "Attempting self-demotion" }
+
+### Refused: a role change with no reason (400)
+POST {{host}}/api/admin/users/user-01/role
+X-User-Id: {{administrator}}
+Content-Type: application/json
+
+{ "role": "Technician", "reason": "" }
+
+### Change a role, with a reason for the audit trail
+POST {{host}}/api/admin/users/user-01/role
+X-User-Id: {{administrator}}
+Content-Type: application/json
+
+{ "role": "Technician", "reason": "Joining the support desk on secondment." }
+
+### Deactivate an account — takes effect on the next request
+POST {{host}}/api/admin/users/user-05/active
+X-User-Id: {{administrator}}
+Content-Type: application/json
+
+{ "isActive": false, "reason": "Left the organisation." }
+
+### Refused: a deactivated account cannot use the API at all (401)
+GET {{host}}/api/tickets
+X-User-Id: user-05
+
+### Account change history
+GET {{host}}/api/admin/audit
+X-User-Id: {{administrator}}
 
 ### Liveness
 GET {{host}}/api/health
