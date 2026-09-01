@@ -27,6 +27,22 @@ export interface User {
   displayName: string
   department: string
   role: UserRole
+  isActive: boolean
+}
+
+export type UserEventType = 'RoleChanged' | 'Deactivated' | 'Reactivated'
+
+/** One record of a change to somebody's account. */
+export interface UserAuditEntry {
+  id: number
+  occurredAt: string
+  eventType: UserEventType
+  subjectUserId: string
+  subjectDisplayName: string
+  actorDisplayName: string
+  fromRole: UserRole | null
+  toRole: UserRole | null
+  reason: string
 }
 
 export interface SlaPolicy {

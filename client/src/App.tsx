@@ -1,39 +1,75 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { api } from './api/client'
 import type { User } from './api/types'
 import { DashboardPage } from './pages/DashboardPage'
+import { LoginPage } from './pages/LoginPage'
 import './App.css'
+
+const SESSION_KEY = 'helpdesk.session.userId'
+
+const ROLE_LABEL: Record<User['role'], string> = {
+  Requester: 'Requester',
+  Technician: 'Technician',
+  TeamLead: 'Service manager',
+}
+
+/** Reads the remembered account id, tolerating browsers where storage is unavailable. */
+function readStoredUserId(): string | null {
+  try {
+    return window.localStorage.getItem(SESSION_KEY)
+  } catch {
+    return null
+  }
+}
+
+function writeStoredUserId(userId: string | null): void {
+  try {
+    if (userId === null) {
+      window.localStorage.removeItem(SESSION_KEY)
+    } else {
+      window.localStorage.setItem(SESSION_KEY, userId)
+    }
+  } catch {
+    // A browser with storage disabled simply forgets the session on refresh. Not worth failing over.
+  }
+}
 
 /**
  * Application shell.
  *
- * The role switcher is a prototype affordance, not authentication. It changes which identity the
- * client claims; it does not grant anything. Every permission is decided by the server against that
- * user's stored role, which is why switching to a technician and watching the dashboard get refused
- * demonstrates something real rather than a hidden menu item.
+ * A remembered session is re-established through the sign-in endpoint rather than trusted from
+ * storage. That matters: an account deactivated since the last visit is rejected on the way back in,
+ * so revoking access takes effect on the next page load rather than whenever the browser happens to
+ * forget. The stored value is only an account identifier — no role and no privilege is cached.
  */
 export default function App() {
-  const [users, setUsers] = useState<User[]>([])
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [restoring, setRestoring] = useState(true)
 
   useEffect(() => {
+    const storedId = readStoredUserId()
+
+    if (!storedId) {
+      setRestoring(false)
+      return
+    }
+
     let cancelled = false
 
     api
-      .getUsers()
-      .then((loaded) => {
-        if (cancelled) return
-
-        setUsers(loaded)
-        // Open as the service manager: the dashboard is their view, and it is where a demo starts.
-        setCurrentUser(loaded.find((u) => u.role === 'TeamLead') ?? loaded[0] ?? null)
+      .signIn(storedId)
+      .then((restored) => {
+        if (!cancelled) {
+          setUser(restored)
+        }
       })
       .catch(() => {
+        // Unknown, deactivated, or the API is down. Either way, back to the sign-in screen.
+        writeStoredUserId(null)
+      })
+      .finally(() => {
         if (!cancelled) {
-          setLoadError(
-            'Could not reach the API. Start it with: dotnet run --project src/Helpdesk.Api',
-          )
+          setRestoring(false)
         }
       })
 
@@ -41,6 +77,28 @@ export default function App() {
       cancelled = true
     }
   }, [])
+
+  const signIn = useCallback((signedIn: User) => {
+    writeStoredUserId(signedIn.id)
+    setUser(signedIn)
+  }, [])
+
+  const signOut = useCallback(() => {
+    writeStoredUserId(null)
+    setUser(null)
+  }, [])
+
+  if (restoring) {
+    return (
+      <main className="login">
+        <p className="dashboard-message">Restoring your session…</p>
+      </main>
+    )
+  }
+
+  if (!user) {
+    return <LoginPage onSignedIn={signIn} />
+  }
 
   return (
     <div className="app">
@@ -53,33 +111,19 @@ export default function App() {
           </div>
         </div>
 
-        <label className="role-switcher">
-          <span>Viewing as</span>
-          <select
-            value={currentUser?.id ?? ''}
-            onChange={(event) =>
-              setCurrentUser(users.find((u) => u.id === event.target.value) ?? null)
-            }
-            disabled={users.length === 0}
-          >
-            {users.map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.displayName} — {user.role === 'TeamLead' ? 'Service manager' : user.role}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="app-session">
+          <div className="app-user">
+            <strong>{user.displayName}</strong>
+            <span className="app-context">{ROLE_LABEL[user.role]}</span>
+          </div>
+          <button type="button" className="link-button" onClick={signOut}>
+            Sign out
+          </button>
+        </div>
       </header>
 
       <main className="app-main">
-        {loadError && (
-          <div className="dashboard-notice" role="alert">
-            <h2>The API is not responding</h2>
-            <p>{loadError}</p>
-          </div>
-        )}
-
-        {currentUser && <DashboardPage currentUser={currentUser} />}
+        <DashboardPage currentUser={user} />
       </main>
     </div>
   )

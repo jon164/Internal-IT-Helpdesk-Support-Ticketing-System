@@ -21,6 +21,7 @@ const manager: User = {
   displayName: 'Maia Thornton',
   department: 'IT Support',
   role: 'TeamLead',
+  isActive: true,
 }
 
 const technician: User = {
@@ -28,6 +29,7 @@ const technician: User = {
   displayName: 'Nikau Ashford',
   department: 'IT Support',
   role: 'Technician',
+  isActive: true,
 }
 
 function report(overrides: Partial<BacklogReport> = {}): BacklogReport {

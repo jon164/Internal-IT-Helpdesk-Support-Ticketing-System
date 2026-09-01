@@ -5,6 +5,8 @@ import type {
   SlaPolicy,
   TicketSummary,
   User,
+  UserAuditEntry,
+  UserRole,
 } from './types'
 
 /**
@@ -71,7 +73,36 @@ async function request<T>(path: string, userId: string | null, init?: RequestIni
 }
 
 export const api = {
+  /**
+   * Establishes which account the caller is acting as.
+   *
+   * The prototype verifies no credential — this selects an identity rather than authenticating one.
+   * The seam is here deliberately: adding a password means adding a field to this call and a check
+   * in the handler, not rewriting every caller.
+   */
+  signIn: (userId: string) =>
+    request<User>('/session', null, {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    }),
+
   getUsers: () => request<User[]>('/users', null),
+
+  getAdminUsers: (userId: string) => request<User[]>('/admin/users', userId),
+
+  getUserAudit: (userId: string) => request<UserAuditEntry[]>('/admin/audit', userId),
+
+  changeUserRole: (actingUserId: string, subjectId: string, role: UserRole, reason: string) =>
+    request<User>(`/admin/users/${encodeURIComponent(subjectId)}/role`, actingUserId, {
+      method: 'POST',
+      body: JSON.stringify({ role, reason }),
+    }),
+
+  setUserActive: (actingUserId: string, subjectId: string, isActive: boolean, reason: string) =>
+    request<User>(`/admin/users/${encodeURIComponent(subjectId)}/active`, actingUserId, {
+      method: 'POST',
+      body: JSON.stringify({ isActive, reason }),
+    }),
 
   getPriorities: () => request<SlaPolicy[]>('/reference/priorities', null),
 

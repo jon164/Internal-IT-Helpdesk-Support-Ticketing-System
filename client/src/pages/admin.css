@@ -1,0 +1,153 @@
+.admin-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--gridline);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.admin-table thead th {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-table tbody tr:last-child th,
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Deactivated accounts are dimmed but still legible — they remain part of the record. */
+.admin-table tr.is-inactive td {
+  color: var(--text-muted);
+}
+
+.admin-table select {
+  padding: 5px 8px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.admin-table select:disabled,
+.admin-table button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.admin-you {
+  margin-left: 8px;
+  padding: 1px 6px;
+  background: var(--surface-sunken);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.admin-inactive-tag {
+  margin-left: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.admin-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--status-warning);
+  border-radius: var(--radius-sm);
+}
+
+.admin-confirm-summary {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.admin-reason {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.admin-reason span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.admin-reason input {
+  padding: 8px 10px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.admin-action-error {
+  margin: 0;
+  color: var(--status-critical);
+  font-size: 13px;
+}
+
+.admin-confirm-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-audit {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-audit li {
+  padding: 10px 12px;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-sm);
+}
+
+.admin-audit-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.admin-audit-head strong {
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.admin-audit p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.admin-audit-reason {
+  color: var(--text-muted) !important;
+  font-style: italic;
+}

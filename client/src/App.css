@@ -39,20 +39,18 @@
   font-size: 12px;
 }
 
-.role-switcher {
+.app-session {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: var(--text-muted);
-  font-size: 12px;
+  gap: 16px;
 }
 
-.role-switcher select {
-  padding: 6px 8px;
-  background: var(--surface-1);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
+.app-user {
+  text-align: right;
+}
+
+.app-user strong {
+  display: block;
   font-size: 13px;
 }
 
