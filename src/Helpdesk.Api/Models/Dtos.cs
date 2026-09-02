@@ -42,6 +42,9 @@ public record TicketDetailDto(
 
 public record TicketNoteDto(Guid Id, string AuthorId, string AuthorName, string Content, bool IsInternal, DateTime CreatedAt);
 
+public record UserDto(string Id, string DisplayName, string Department, string Role, bool IsActive);
+public record SignInRequest(string UserId);
+
 public record TicketAuditDto(Guid Id, string ChangedBy, TicketStatus? FromStatus, TicketStatus? ToStatus, string Action, string? Comment, DateTime Timestamp);
 
 public record TicketLinkDto(Guid Id, Guid OtherTicketId, string? OtherTicketTitle, TicketLinkType LinkType, DateTime CreatedAt, string Direction);

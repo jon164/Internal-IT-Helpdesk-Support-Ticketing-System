@@ -8,6 +8,7 @@ public interface ITicketRepository
     Task<Technician?> GetTechnicianByIdAsync(Guid id);
     Task<List<Ticket>> GetAssignedTicketsAsync(Guid technicianId);
     Task<List<Ticket>> GetUnassignedTicketsAsync();
+    Task<List<Ticket>> GetAllTicketsAsync();
     Task<Ticket?> GetTicketByIdAsync(Guid id);
     Task<List<Ticket>> GetResolvedTicketsOlderThanAsync(DateTime cutoff);
     Task<bool> HasLinkBetweenAsync(Guid firstTicketId, Guid secondTicketId);

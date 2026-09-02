@@ -28,3 +28,10 @@ public enum TicketLinkType
     Duplicate = 0,
     Related = 1
 }
+
+public enum UserRole
+{
+    Requester = 0,
+    Technician = 1,
+    TeamLead = 2
+}

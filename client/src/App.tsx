@@ -4,11 +4,14 @@ import { NoticeBanner } from './components/NoticeBanner'
 import { DashboardPage } from './pages/DashboardPage'
 import { FlightLookupPage } from './pages/FlightLookupPage'
 import { TicketsPage } from './pages/TicketsPage'
+import { api } from './services/api'
 import type { Notice, Role } from './types'
 
 type Page = 'tickets' | 'flight' | 'dashboard'
 
 const THEME_KEY = 'airport-helpdesk-theme'
+const SESSION_KEY = 'airport-helpdesk-auth'
+const ROLE_KEY = 'airport-helpdesk-role'
 
 const PAGE_LABELS: Record<Page, string> = {
   tickets: 'Tickets',
@@ -16,9 +19,18 @@ const PAGE_LABELS: Record<Page, string> = {
   dashboard: 'Manager dashboard',
 }
 
+const ROLE_OPTIONS: Role[] = ['Airport Staff', 'IT Technician', 'IT Manager']
+
 export default function App() {
-  const [role, setRole] = useState<Role>('Airport Staff')
+  const [role, setRole] = useState<Role>(() => {
+    const savedRole = localStorage.getItem(ROLE_KEY)
+    return (savedRole as Role | null) ?? 'Airport Staff'
+  })
   const [page, setPage] = useState<Page>('tickets')
+  const [isSignedIn, setIsSignedIn] = useState(() => {
+    const saved = localStorage.getItem(SESSION_KEY)
+    return saved !== 'signed-out'
+  })
 
   // USER STORY: Light / Dark Mode
   // The selected theme is saved so it stays after refreshing.
@@ -40,7 +52,45 @@ export default function App() {
     )
   }, [dark])
 
+  useEffect(() => {
+    localStorage.setItem(ROLE_KEY, role)
+  }, [role])
+
+  useEffect(() => {
+    localStorage.setItem(SESSION_KEY, isSignedIn ? 'signed-in' : 'signed-out')
+  }, [isSignedIn])
+
+  async function signIn(next: Role) {
+    try {
+      await api.signIn(next)
+      setRole(next)
+      setNotice(null)
+      setIsSignedIn(true)
+
+      if (next === 'IT Manager') {
+        setPage('dashboard')
+      } else if (page === 'dashboard') {
+        setPage('tickets')
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Sign in failed.'
+      setNotice({ type: 'error', text: message })
+    }
+  }
+
+  function signOut() {
+    setIsSignedIn(false)
+    setRole('Airport Staff')
+    setPage('tickets')
+    setNotice({ type: 'info', text: 'Signed out. Choose a demo account to continue.' })
+  }
+
   function changeRole(next: Role) {
+    if (!isSignedIn) {
+      signIn(next)
+      return
+    }
+
     setRole(next)
     setNotice(null)
 
@@ -52,8 +102,60 @@ export default function App() {
   }
 
   function goTo(next: Page) {
+    if (!isSignedIn && next !== 'tickets') {
+      return
+    }
+
     setPage(next)
     setNotice(null)
+  }
+
+  if (!isSignedIn) {
+    return (
+      <div className={dark ? 'app dark' : 'app light'}>
+        <div className="auth-shell">
+          <div className="auth-card">
+            <div className="auth-brand">
+              <div className="brand-mark">IT</div>
+
+              <div>
+                <strong>HelpDesk</strong>
+                <span>Airport Support Platform</span>
+              </div>
+            </div>
+
+            <h1>Sign in</h1>
+            <p className="auth-subtitle">
+              Use the demo identity to access the ticket workflow and manager analytics.
+            </p>
+
+            <label className="auth-field">
+              <span>Demo account</span>
+              <select
+                value={role}
+                onChange={event => setRole(event.target.value as Role)}
+              >
+                {ROLE_OPTIONS.map(option => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </label>
+
+            <button
+              type="button"
+              className="primary-button auth-button"
+              onClick={() => void signIn(role)}
+            >
+              Sign in
+            </button>
+
+            <div className="auth-note">
+              This is a demo sign-in flow for the support workspace; the backend still enforces role-based access on requests.
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -173,11 +275,15 @@ export default function App() {
                   )
                 }
               >
-                <option>Airport Staff</option>
-                <option>IT Technician</option>
-                <option>IT Manager</option>
+                {ROLE_OPTIONS.map(option => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
               </select>
             </label>
+
+            <button type="button" className="secondary-button signout-btn" onClick={signOut}>
+              Sign out
+            </button>
 
             {/* USER STORY: Light / Dark Mode */}
             <button
@@ -214,6 +320,26 @@ export default function App() {
               <span className="toggle-label">
                 {dark ? 'Dark' : 'Light'}
               </span>
+            </button>
+
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={async () => {
+                console.log('[App] Testing API connection...')
+                try {
+                  const result = await api.getTickets('priority-age')
+                  console.log('[App] API test SUCCESS:', result.length, 'tickets returned')
+                  setNotice({ type: 'success', text: `API working! Got ${result.length} tickets.` })
+                } catch (error) {
+                  console.error('[App] API test FAILED:', error)
+                  const msg = error instanceof Error ? error.message : 'Unknown error'
+                  setNotice({ type: 'error', text: `API test failed: ${msg}` })
+                }
+              }}
+              title="Test if the API is responding"
+            >
+              🔧 Test API
             </button>
           </div>
         </header>

@@ -46,6 +46,14 @@ public class TicketRepository : ITicketRepository
             .ToListAsync();
     }
 
+    public async Task<List<Ticket>> GetAllTicketsAsync()
+    {
+        return await _context.Tickets
+            .Include(t => t.AssignedTechnician)
+            .OrderByDescending(t => t.CreatedAt)
+            .ToListAsync();
+    }
+
     public async Task<Ticket?> GetTicketByIdAsync(Guid id)
     {
         return await _context.Tickets

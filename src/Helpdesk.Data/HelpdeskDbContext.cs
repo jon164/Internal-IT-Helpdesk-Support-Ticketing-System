@@ -9,12 +9,24 @@ public class HelpdeskDbContext : DbContext
 
     public DbSet<Ticket> Tickets => Set<Ticket>();
     public DbSet<Technician> Technicians => Set<Technician>();
+    public DbSet<UserAccount> Users => Set<UserAccount>();
     public DbSet<TicketNote> TicketNotes => Set<TicketNote>();
     public DbSet<TicketAuditEntry> TicketAuditEntries => Set<TicketAuditEntry>();
     public DbSet<TicketLink> TicketLinks => Set<TicketLink>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<UserAccount>(entity =>
+        {
+            entity.ToTable("Users");
+            entity.HasKey(u => u.Id);
+            entity.Property(u => u.Id).HasMaxLength(120).IsRequired();
+            entity.Property(u => u.DisplayName).HasMaxLength(120).IsRequired();
+            entity.Property(u => u.Department).HasMaxLength(120).IsRequired();
+            entity.Property(u => u.Role).HasConversion<int>();
+            entity.Property(u => u.IsActive).HasDefaultValue(true);
+        });
+
         modelBuilder.Entity<Ticket>(entity =>
         {
             entity.ToTable("Tickets");

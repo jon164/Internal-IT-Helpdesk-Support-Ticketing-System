@@ -22,6 +22,18 @@ public class TicketService
     public async Task<IReadOnlyList<Ticket>> GetUnassignedTicketsAsync() =>
         await _repository.GetUnassignedTicketsAsync();
 
+    public async Task<IReadOnlyList<Ticket>> GetTicketsAsync(string? sort = null)
+    {
+        var tickets = await _repository.GetAllTicketsAsync();
+
+        return sort switch
+        {
+            "oldest" => tickets.OrderBy(t => t.CreatedAt).ToList(),
+            "priority-age" => tickets.OrderByDescending(t => t.Priority).ThenBy(t => t.CreatedAt).ToList(),
+            _ => tickets.OrderByDescending(t => t.CreatedAt).ToList(),
+        };
+    }
+
     public async Task<Ticket> GetTicketAsync(Guid id) =>
         await _repository.GetTicketByIdAsync(id) ?? throw new NotFoundException("Ticket not found.");
 

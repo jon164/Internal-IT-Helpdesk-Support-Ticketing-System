@@ -3,6 +3,13 @@ export type TicketStatus = 'New' | 'InProgress' | 'WaitingOnUser' | 'Resolved' |
 export type TicketPriority = 'Low' | 'Medium' | 'High' | 'Critical'
 export type TicketSort = 'newest' | 'oldest' | 'priority-age'
 
+export type Technician = {
+  id: string
+  name: string
+  email: string
+  isActive: boolean
+}
+
 export type Ticket = {
   id: number
   terminal: string

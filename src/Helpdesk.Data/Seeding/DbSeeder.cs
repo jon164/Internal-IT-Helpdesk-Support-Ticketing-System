@@ -5,6 +5,27 @@ namespace Helpdesk.Data.Seeding;
 
 public static class DbSeeder
 {
+    public static async Task EnsureDemoUsersAsync(HelpdeskDbContext context, CancellationToken ct = default)
+    {
+        var seeded = new[]
+        {
+            new UserAccount { Id = "airport-staff", DisplayName = "Airport Staff", Department = "Operations", Role = UserRole.Requester, IsActive = true },
+            new UserAccount { Id = "it-technician", DisplayName = "IT Technician", Department = "IT Services", Role = UserRole.Technician, IsActive = true },
+            new UserAccount { Id = "it-manager", DisplayName = "IT Manager", Department = "IT Services", Role = UserRole.TeamLead, IsActive = true },
+        };
+
+        foreach (var account in seeded)
+        {
+            var exists = await context.Users.AnyAsync(u => u.Id == account.Id, ct);
+            if (!exists)
+            {
+                await context.Users.AddAsync(account, ct);
+            }
+        }
+
+        await context.SaveChangesAsync(ct);
+    }
+
     public static async Task SeedAsync(HelpdeskDbContext context, CancellationToken ct = default)
     {
         if (await context.Technicians.AnyAsync(ct))

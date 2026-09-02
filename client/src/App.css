@@ -302,6 +302,12 @@ button {
   gap: 8px;
 }
 
+.signout-btn {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+}
+
 .role-switcher {
   display: flex;
   align-items: center;
@@ -320,6 +326,90 @@ button {
   padding: 5px 27px 5px 8px;
   border-radius: 6px;
   font-size: 9px;
+}
+
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: linear-gradient(180deg, var(--bg), var(--surface-2));
+}
+
+.auth-card {
+  width: min(100%, 440px);
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-brand strong {
+  display: block;
+  font-size: 14px;
+}
+
+.auth-brand span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.auth-card h1 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.auth-subtitle {
+  margin: -6px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.auth-field {
+  display: grid;
+  gap: 7px;
+}
+
+.auth-field span {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.auth-field select {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.auth-button {
+  min-height: 42px;
+}
+
+.auth-note {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
 }
 
 .icon-button {

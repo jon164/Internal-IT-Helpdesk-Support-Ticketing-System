@@ -5,6 +5,7 @@ import type {
   FlightRecord,
   Role,
   StaffProfile,
+  Technician,
   Ticket,
   TicketNote,
   TicketSort,
@@ -12,6 +13,12 @@ import type {
 } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
+
+const DEMO_USER_IDS: Record<Role, string> = {
+  'Airport Staff': 'airport-staff',
+  'IT Technician': 'it-technician',
+  'IT Manager': 'it-manager',
+}
 
 export class ApiError extends Error {
   status: number
@@ -24,21 +31,33 @@ export class ApiError extends Error {
   }
 }
 
+function resolveUserId(role?: Role) {
+  return role ? DEMO_USER_IDS[role] : undefined
+}
+
 async function request<T>(path: string, options: RequestInit = {}, role?: Role): Promise<T> {
   const headers = new Headers(options.headers)
   if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
-  if (role) headers.set('X-Demo-Role', role)
+  const userId = resolveUserId(role)
+  if (userId) headers.set('X-User-Id', userId)
 
-  const response = await fetch(`${API_BASE}${path}`, { ...options, headers })
+  const url = `${API_BASE}${path}`
+  console.log(`[API] ${options.method || 'GET'} ${url}`, { userId, body: options.body })
+  
+  const response = await fetch(url, { ...options, headers })
+  
   if (!response.ok) {
     let body: { message?: string; validNextStatuses?: string[] } | undefined
     try { body = await response.json() } catch { body = undefined }
+    console.error(`[API] ${response.status} error`, body)
     throw new ApiError(body?.message ?? `Request failed (${response.status}).`, response.status, body)
   }
   if (response.status === 204) return undefined as T
-  return response.json() as Promise<T>
+  const result = await response.json() as T
+  console.log(`[API] Response:`, result)
+  return result
 }
 
 function qs(values: Record<string, string | number | boolean | undefined>) {
@@ -50,8 +69,20 @@ function qs(values: Record<string, string | number | boolean | undefined>) {
 }
 
 export const api = {
+  signIn(role: Role) {
+    const userId = resolveUserId(role)
+    return request<{ id: string; displayName: string; department: string; role: string; isActive: boolean }>(
+      '/api/session',
+      { method: 'POST', body: JSON.stringify({ userId }) },
+    )
+  },
+
   getTickets(sort: TicketSort) {
     return request<Ticket[]>(`/api/tickets${qs({ sort })}`)
+  },
+
+  getTechnicians() {
+    return request<Technician[]>('/api/technicians')
   },
 
   createTicket(payload: CreateTicketRequest) {
@@ -120,7 +151,7 @@ export const api = {
 
   async exportDashboard(filters: DashboardFilters, role: Role) {
     const response = await fetch(`${API_BASE}/api/dashboard/export${qs(filters)}`, {
-      headers: { 'X-Demo-Role': role },
+      headers: { 'X-User-Id': resolveUserId(role)! },
     })
     if (!response.ok) {
       const body = await response.json().catch(() => ({})) as { message?: string }

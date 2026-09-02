@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Helpdesk.Api\Helpdesk.Api.csproj" />
     <ProjectReference Include="..\..\src\Helpdesk.Core\Helpdesk.Core.csproj" />
     <ProjectReference Include="..\..\src\Helpdesk.Data\Helpdesk.Data.csproj" />
   </ItemGroup>

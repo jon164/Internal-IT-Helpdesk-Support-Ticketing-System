@@ -11,6 +11,7 @@ import {
 import type {
   Notice,
   Role,
+  Technician,
   Ticket,
   TicketNote,
   TicketStatus,
@@ -21,7 +22,6 @@ import {
   formatFileSize,
   STATUS_DISPLAY,
   STATUS_OPTIONS,
-  TECHNICIANS,
 } from '../utils'
 
 export function TicketDetails({
@@ -57,9 +57,27 @@ export function TicketDetails({
   const [notes, setNotes] =
     useState<TicketNote[]>([])
 
+  const [technicians, setTechnicians] =
+    useState<Technician[]>([])
+
   const isIT =
     role === 'IT Technician' ||
     role === 'IT Manager'
+
+  useEffect(() => {
+    async function loadTechnicians() {
+      try {
+        console.log('[TicketDetails] Loading technicians...')
+        const techs = await api.getTechnicians()
+        console.log('[TicketDetails] Technicians loaded:', techs)
+        setTechnicians(techs)
+      } catch (error) {
+        console.error('[TicketDetails] Failed to load technicians:', error)
+        setTechnicians([])
+      }
+    }
+    void loadTechnicians()
+  }, [])
 
   useEffect(() => {
     if (!ticket) return
@@ -119,6 +137,7 @@ export function TicketDetails({
     if (!ticket) return
 
     try {
+      console.log('[TicketDetails] Saving ticket', { ticketId: ticket.id, status, assignee, role })
       const updated =
         await api.updateTicket(
           ticket.id,
@@ -130,6 +149,7 @@ export function TicketDetails({
           role,
         )
 
+      console.log('[TicketDetails] Save successful', updated)
       setNotice({
         type: 'success',
         text: `Ticket #${ticket.id} updated.`,
@@ -137,6 +157,7 @@ export function TicketDetails({
 
       await onChanged(updated)
     } catch (error) {
+      console.error('[TicketDetails] Save failed', error)
       setNotice({
         type: 'error',
         text: errorText(error),
@@ -147,21 +168,27 @@ export function TicketDetails({
   async function claim() {
     if (!ticket) return
 
+    // Use first available technician
+    const technicianName = technicians.length > 0 ? technicians[0].name : 'Unassigned'
+
     try {
+      console.log('[TicketDetails] Claiming ticket', { ticketId: ticket.id, technicianName, role })
       const updated =
         await api.claimTicket(
           ticket.id,
-          'Alex Morgan',
+          technicianName,
           role,
         )
 
+      console.log('[TicketDetails] Claim successful', updated)
       setNotice({
         type: 'success',
-        text: `Ticket #${ticket.id} claimed by Alex Morgan.`,
+        text: `Ticket #${ticket.id} claimed by ${updated.assignee}.`,
       })
 
       await onChanged(updated)
     } catch (error) {
+      console.error('[TicketDetails] Claim failed', error)
       setNotice({
         type: 'error',
         text: errorText(error),
@@ -173,6 +200,7 @@ export function TicketDetails({
     if (!ticket) return
 
     try {
+      console.log('[TicketDetails] Reassigning ticket', { ticketId: ticket.id, assignee, role })
       const updated =
         await api.reassignTicket(
           ticket.id,
@@ -180,6 +208,7 @@ export function TicketDetails({
           role,
         )
 
+      console.log('[TicketDetails] Reassign successful', updated)
       setNotice({
         type: 'success',
         text: `Ticket #${ticket.id} reassigned to ${updated.assignee}.`,
@@ -187,6 +216,7 @@ export function TicketDetails({
 
       await onChanged(updated)
     } catch (error) {
+      console.error('[TicketDetails] Reassign failed', error)
       setNotice({
         type: 'error',
         text: errorText(error),
@@ -198,6 +228,7 @@ export function TicketDetails({
     if (!ticket) return
 
     try {
+      console.log('[TicketDetails] Escalating ticket', { ticketId: ticket.id, escalationReason, role })
       const updated =
         await api.escalateTicket(
           ticket.id,
@@ -207,6 +238,7 @@ export function TicketDetails({
 
       setEscalationReason('')
 
+      console.log('[TicketDetails] Escalate successful', updated)
       setNotice({
         type: 'success',
         text: `Ticket #${ticket.id} escalated to ${updated.priority} priority.`,
@@ -215,6 +247,7 @@ export function TicketDetails({
       await onChanged(updated)
       await loadNotes(ticket.id)
     } catch (error) {
+      console.error('[TicketDetails] Escalate failed', error)
       setNotice({
         type: 'error',
         text: errorText(error),
@@ -225,18 +258,26 @@ export function TicketDetails({
   async function addNote() {
     if (!ticket) return
 
+    // Determine note author based on role
+    let author = 'Technician'
+    if (role === 'IT Manager') {
+      author = 'IT Manager'
+    } else if (technicians.length > 0) {
+      author = technicians[0].name
+    }
+
     try {
+      console.log('[TicketDetails] Adding note', { ticketId: ticket.id, author, role })
       await api.addNote(
         ticket.id,
-        role === 'IT Manager'
-          ? 'IT Manager'
-          : 'Alex Morgan',
+        author,
         noteBody,
         role,
       )
 
       setNoteBody('')
 
+      console.log('[TicketDetails] Note added, reloading notes')
       await loadNotes(ticket.id)
 
       setNotice({
@@ -244,6 +285,7 @@ export function TicketDetails({
         text: 'Internal note added.',
       })
     } catch (error) {
+      console.error('[TicketDetails] Add note failed', error)
       setNotice({
         type: 'error',
         text: errorText(error),
@@ -520,16 +562,17 @@ export function TicketDetails({
                   )
                 }
               >
-                <option>
+                <option value="Unassigned">
                   Unassigned
                 </option>
 
-                {TECHNICIANS.map(
+                {technicians.map(
                   technician => (
                     <option
-                      key={technician}
+                      key={technician.id}
+                      value={technician.name}
                     >
-                      {technician}
+                      {technician.name}
                     </option>
                   ),
                 )}
