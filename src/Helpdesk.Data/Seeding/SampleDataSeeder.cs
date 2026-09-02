@@ -33,11 +33,11 @@ public static class SampleDataSeeder
     /// <summary>How far back the generated history extends.</summary>
     public const int HistoryDays = 180;
 
-    private static readonly string[] Categories =
-    [
-        "Account & Access", "Hardware", "Software", "Network", "Printing",
-        "AV & Meeting Rooms", "Point of Sale", "Mobile & Telephony", "Email"
-    ];
+    /// <summary>
+    /// The same catalogue the submission form offers. Kept as one list so generated history and
+    /// newly raised requests cannot be filed under different sets of categories.
+    /// </summary>
+    private static readonly string[] Categories = [.. TicketCategories.All];
 
     private static readonly (string Name, string Department)[] Requesters =
     [
@@ -172,10 +172,43 @@ public static class SampleDataSeeder
     ];
 
     /// <summary>
-    /// Seeds the database if it is empty. Safe to call on every start-up.
+    /// Deletes every ticket, along with its audit trail and hold windows.
     /// </summary>
-    /// <returns>True if data was written, false if the database was already populated.</returns>
-    public static async Task<bool> EnsureSeededAsync(
+    /// <remarks>
+    /// <para>
+    /// Demonstration tooling. It exists so the prototype can be shown starting from nothing and
+    /// populated on demand, and so a walkthrough can be repeated without deleting the database file
+    /// by hand.
+    /// </para>
+    /// <para>
+    /// User accounts are deliberately left alone: clearing them would sign everybody out mid
+    /// demonstration, and the account-change log names people who must continue to exist.
+    /// </para>
+    /// </remarks>
+    /// <returns>How many tickets were removed.</returns>
+    public static async Task<int> ClearTicketsAsync(
+        HelpdeskDbContext db,
+        CancellationToken cancellationToken = default)
+    {
+        var removed = await db.Tickets.CountAsync(cancellationToken);
+
+        // Children first. The mapping cascades, but deleting in dependency order keeps this correct
+        // regardless of how the provider is configured.
+        await db.Database.ExecuteSqlRawAsync("DELETE FROM TicketEvents", cancellationToken);
+        await db.Database.ExecuteSqlRawAsync("DELETE FROM HoldPeriods", cancellationToken);
+        await db.Database.ExecuteSqlRawAsync("DELETE FROM Tickets", cancellationToken);
+
+        return removed;
+    }
+
+    /// <summary>
+    /// Generates the sample population, refusing if tickets already exist.
+    /// </summary>
+    /// <remarks>
+    /// Refusing rather than appending is deliberate: the generator numbers references from one, so
+    /// running it twice would produce duplicates. Clear first, then generate.
+    /// </remarks>
+    public static async Task<int> GenerateAsync(
         HelpdeskDbContext db,
         DateTimeOffset now,
         int ticketCount = DefaultTicketCount,
@@ -183,16 +216,18 @@ public static class SampleDataSeeder
     {
         if (await db.Tickets.AnyAsync(cancellationToken))
         {
-            // The database predates a later seeder change and may be missing accounts added since.
-            // Topping them up is safer than telling everybody to delete their local database, and
-            // avoids the confusing case where a documented demo account simply is not there.
-            await EnsureAccountsAsync(db, cancellationToken);
-            return false;
+            throw new InvalidOperationException(
+                "Sample data can only be generated into an empty ticket table.");
         }
 
-        Seed(db, now, ticketCount);
+        await EnsureAccountsAsync(db, cancellationToken);
+
+        var tickets = BuildTickets(now, ticketCount);
+
+        db.Tickets.AddRange(tickets);
         await db.SaveChangesAsync(cancellationToken);
-        return true;
+
+        return tickets.Count;
     }
 
     /// <summary>
@@ -270,6 +305,16 @@ public static class SampleDataSeeder
     {
         ArgumentNullException.ThrowIfNull(db);
 
+        db.Users.AddRange(BuildUsers());
+        db.Tickets.AddRange(BuildTickets(now, ticketCount));
+    }
+
+    /// <summary>
+    /// Builds the ticket population. The single place tickets are generated, so the on-demand
+    /// generator and the in-memory seeder cannot drift into producing different data.
+    /// </summary>
+    private static List<Ticket> BuildTickets(DateTimeOffset now, int ticketCount)
+    {
         if (ticketCount < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(ticketCount));
@@ -277,9 +322,6 @@ public static class SampleDataSeeder
 
         var random = new Random(RandomSeed);
         var calculator = SlaCalculator.Default;
-
-        db.Users.AddRange(BuildUsers());
-
         var tickets = new List<Ticket>(ticketCount);
 
         for (var i = 1; i <= ticketCount; i++)
@@ -287,7 +329,7 @@ public static class SampleDataSeeder
             tickets.Add(BuildTicket(i, random, calculator, now));
         }
 
-        db.Tickets.AddRange(tickets);
+        return tickets;
     }
 
     private static List<UserAccount> BuildUsers()

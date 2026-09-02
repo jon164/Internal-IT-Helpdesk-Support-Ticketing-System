@@ -64,7 +64,16 @@ public sealed class TicketService
             .AsNoTracking()
             .AsQueryable();
 
-        if (query.OnlyOpen)
+        if (query.OnlyRequiringWork)
+        {
+            // Mirrors Ticket.RequiresWork. Written out rather than calling the property because this
+            // has to translate to SQL; the two are covered by a test that fails if they diverge.
+            candidates = candidates.Where(t =>
+                t.Status != TicketStatus.Resolved
+                && t.Status != TicketStatus.Closed
+                && t.Status != TicketStatus.Cancelled);
+        }
+        else if (query.OnlyOpen)
         {
             candidates = candidates.Where(t =>
                 t.Status != TicketStatus.Closed && t.Status != TicketStatus.Cancelled);
@@ -613,7 +622,20 @@ public sealed record TicketQuery
 {
     public static TicketQuery Default { get; } = new();
 
+    /// <summary>Excludes closed and cancelled tickets. A resolved ticket is still open.</summary>
     public bool OnlyOpen { get; init; }
+
+    /// <summary>
+    /// Narrower than <see cref="OnlyOpen"/>: excludes resolved tickets too, leaving only work that
+    /// still needs a technician.
+    /// </summary>
+    /// <remarks>
+    /// The distinction is <see cref="Ticket.RequiresWork"/>, which management reporting already
+    /// relies on to keep resolved-but-unconfirmed tickets out of the backlog figure. A technician's
+    /// queue needs the same question answered — without it, a working queue of eleven arrived
+    /// buried under twenty-four tickets waiting on somebody else to confirm the fix.
+    /// </remarks>
+    public bool OnlyRequiringWork { get; init; }
 
     public TicketStatus? Status { get; init; }
 

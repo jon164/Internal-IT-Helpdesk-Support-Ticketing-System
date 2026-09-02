@@ -55,6 +55,7 @@ public static class TicketEndpoints
         string? assignedTo,
         bool? unassignedOnly,
         bool? openOnly,
+        bool? needsWorkOnly,
         CancellationToken cancellationToken)
     {
         if (ActorMiddleware.Current(context) is not { } actor)
@@ -75,6 +76,7 @@ public static class TicketEndpoints
         var query = new TicketQuery
         {
             OnlyOpen = openOnly ?? false,
+            OnlyRequiringWork = needsWorkOnly ?? false,
             Status = parsedStatus,
             Priority = parsedPriority,
             AssignedTo = assignedTo,
@@ -328,15 +330,11 @@ public static class ReferenceEndpoints
            .WithTags("Reference")
            .WithSummary("Priority bands and their configured targets.");
 
-        app.MapGet("/api/reference/categories", async (HelpdeskDbContext db, CancellationToken ct) =>
-            Results.Ok(await db.Tickets
-                .AsNoTracking()
-                .Select(t => t.Category)
-                .Distinct()
-                .OrderBy(c => c)
-                .ToListAsync(ct)))
+        // The catalogue, not the categories currently in use. Deriving it from existing tickets left
+        // the first requester on an empty system with nothing to choose from.
+        app.MapGet("/api/reference/categories", () => Results.Ok(TicketCategories.All))
            .WithTags("Reference")
-           .WithSummary("Categories currently in use.");
+           .WithSummary("The categories a request may be filed under.");
 
         app.MapGet("/api/reports/summary", async (
                 HttpContext context,

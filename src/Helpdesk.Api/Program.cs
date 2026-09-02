@@ -65,7 +65,6 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<HelpdeskDbContext>();
-    var clock = scope.ServiceProvider.GetRequiredService<IClock>();
 
     // EnsureCreated is appropriate for a prototype with no production data to migrate. A deployed
     // system would use EF Core migrations instead; this is recorded as a known limitation.
@@ -80,10 +79,28 @@ using (var scope = app.Services.CreateScope())
             + "to the service manager.");
     }
 
-    if (await SampleDataSeeder.EnsureSeededAsync(db, clock.UtcNow))
+    // Accounts only. The ticket table starts empty and stays empty until somebody asks for sample
+    // data, so a demonstration begins from a state the audience can watch being filled rather than
+    // one that arrived fully formed. Accounts are the exception because without them nobody can sign
+    // in to press the button.
+    var accountsAdded = await SampleDataSeeder.EnsureAccountsAsync(db);
+
+    if (accountsAdded > 0)
+    {
+        app.Logger.LogInformation("Created {Count} demonstration accounts.", accountsAdded);
+    }
+
+    var ticketCount = await db.Tickets.CountAsync();
+
+    if (ticketCount == 0)
     {
         app.Logger.LogInformation(
-            "Seeded {Count} sample tickets.", SampleDataSeeder.DefaultTicketCount);
+            "The ticket table is empty. Sign in as the service manager and use "
+            + "Accounts -> Demonstration data to generate a sample history.");
+    }
+    else
+    {
+        app.Logger.LogInformation("{Count} tickets present.", ticketCount);
     }
 }
 
@@ -100,6 +117,15 @@ app.MapSessionEndpoints();
 app.MapTicketEndpoints();
 app.MapReferenceEndpoints();
 app.MapAdminEndpoints();
+
+// An endpoint that can fabricate or destroy every ticket in the system has no business existing in a
+// production build. It is registered only outside it, so the route is absent rather than merely
+// guarded — a control that cannot be reached cannot be got wrong. Inside Development it is still
+// restricted to the service manager, because "developers only" is not an authorisation model.
+if (app.Environment.IsDevelopment())
+{
+    app.MapSampleDataEndpoints();
+}
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }))
    .WithTags("Reference")

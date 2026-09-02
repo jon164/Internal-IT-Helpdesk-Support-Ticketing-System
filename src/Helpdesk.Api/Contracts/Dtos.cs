@@ -81,6 +81,7 @@ public sealed record TicketSummaryDto(
     string Status,
     string RequesterName,
     string Department,
+    string? AssignedTechnicianId,
     string? AssignedTechnicianName,
     bool IsRestricted,
     DateTimeOffset CreatedAt,
@@ -90,7 +91,8 @@ public sealed record TicketSummaryDto(
     public static TicketSummaryDto From(Ticket ticket, TicketSlaView sla) =>
         new(ticket.Id, ticket.Reference, ticket.Title, ticket.Category,
             ticket.Priority.ToString(), sla.Policy.DisplayName, ticket.Status.ToString(),
-            ticket.RequesterName, ticket.Department, ticket.AssignedTechnicianName,
+            ticket.RequesterName, ticket.Department,
+            ticket.AssignedTechnicianId, ticket.AssignedTechnicianName,
             ticket.Sensitivity == TicketSensitivity.Restricted, ticket.CreatedAt,
             SlaStatusDto.From(sla.Response), SlaStatusDto.From(sla.Resolution));
 }
@@ -242,6 +244,15 @@ public sealed record SignInRequestDto(string UserId);
 public sealed record ChangeRoleRequestDto(string Role, string Reason);
 
 public sealed record SetActiveRequestDto(bool IsActive, string Reason);
+
+/// <summary>
+/// The state of the demonstration dataset. <paramref name="IsEmpty"/> is sent rather than left to the
+/// client to derive, so both ends agree on what "empty" means.
+/// </summary>
+public sealed record SampleDataStatusDto(int TicketCount, bool IsEmpty, int GeneratedCount);
+
+/// <summary>The outcome of a clear, including how much was destroyed.</summary>
+public sealed record SampleDataClearedDto(int RemovedCount, SampleDataStatusDto Status);
 
 /// <summary>A refusal, in a shape the client can display directly.</summary>
 public sealed record ProblemDto(string Error, string Message);
