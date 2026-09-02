@@ -16,6 +16,7 @@ vi.mock('../api/client', async () => {
       getUserAudit: vi.fn(),
       changeUserRole: vi.fn(),
       setUserActive: vi.fn(),
+      getSampleDataStatus: vi.fn(),
     },
   }
 })
@@ -24,6 +25,7 @@ const getAdminUsers = vi.mocked(api.getAdminUsers)
 const getUserAudit = vi.mocked(api.getUserAudit)
 const changeUserRole = vi.mocked(api.changeUserRole)
 const setUserActive = vi.mocked(api.setUserActive)
+const getSampleDataStatus = vi.mocked(api.getSampleDataStatus)
 
 /** The service manager holds account administration; there is no separate administrator role. */
 const manager: User = {
@@ -79,6 +81,11 @@ describe('AdminView', () => {
     vi.clearAllMocks()
     getAdminUsers.mockResolvedValue(accounts)
     getUserAudit.mockResolvedValue(auditEntries)
+    // The demonstration-data panel is tested on its own; here it stands in for a production build,
+    // where the route does not exist and the panel renders nothing.
+    getSampleDataStatus.mockRejectedValue(
+      new ApiError(404, { error: 'NotFound', message: 'Not found' }),
+    )
   })
 
   it('lists every account, including deactivated ones', async () => {

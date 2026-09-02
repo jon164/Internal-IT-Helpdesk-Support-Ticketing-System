@@ -4,6 +4,7 @@ import type { User, UserAuditEntry, UserRole } from '../api/types'
 import { ReportNotice } from '../components/ReportNotice'
 import { StatTile } from '../components/StatTile'
 import { formatDate } from '../utils/format'
+import { SampleDataPanel } from './SampleDataPanel'
 import './admin.css'
 
 const ROLES: UserRole[] = ['Requester', 'Technician', 'TeamLead']
@@ -326,6 +327,8 @@ export function AdminView({ currentUser }: { currentUser: User }) {
               </ol>
             )}
           </section>
+
+          <SampleDataPanel currentUser={currentUser} />
 
           <footer className="dashboard-footer">
             <p>

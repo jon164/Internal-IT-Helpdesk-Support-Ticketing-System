@@ -3,18 +3,27 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, api } from '../api/client'
 import type { MetricsSummary, User } from '../api/types'
 import { DashboardPage } from './DashboardPage'
+import { PerformanceView } from './PerformanceView'
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client')
 
   return {
     ...actual,
-    api: { ...actual.api, getMetrics: vi.fn(), getBacklog: vi.fn() },
+    api: {
+      ...actual.api,
+      getMetrics: vi.fn(),
+      getBacklog: vi.fn(),
+      getTickets: vi.fn(),
+      getCategories: vi.fn(),
+    },
   }
 })
 
 const getMetrics = vi.mocked(api.getMetrics)
 const getBacklog = vi.mocked(api.getBacklog)
+const getTickets = vi.mocked(api.getTickets)
+const getCategories = vi.mocked(api.getCategories)
 
 const manager: User = {
   id: 'lead-maia',
@@ -29,6 +38,14 @@ const technician: User = {
   displayName: 'Nikau Ashford',
   department: 'IT Support',
   role: 'Technician',
+  isActive: true,
+}
+
+const requester: User = {
+  id: 'user-01',
+  displayName: 'Aroha Ngata',
+  department: 'Administration',
+  role: 'Requester',
   isActive: true,
 }
 
@@ -113,8 +130,10 @@ describe('DashboardPage', () => {
   })
 
   it('reports the server refusal when the role is not permitted', async () => {
-    // The page is not hidden from technicians — it asks and shows what the server said. This is the
-    // test that proves access control is enforced server-side rather than by hiding a menu item.
+    // The reporting view is rendered directly rather than through a tab, because a technician is no
+    // longer offered one — see the navigation test below. The refusal path still matters: it is what
+    // happens when somebody reaches the report by any other means, and it proves the restriction
+    // lives on the server rather than in the menu.
     getMetrics.mockRejectedValue(
       new ApiError(403, {
         error: 'Forbidden',
@@ -122,13 +141,35 @@ describe('DashboardPage', () => {
       }),
     )
 
-    render(<DashboardPage currentUser={technician} />)
+    render(<PerformanceView currentUser={technician} />)
 
     expect(await screen.findByText('Not available to your role')).toBeInTheDocument()
     expect(
       screen.getByText('Management reporting is restricted to the service manager.'),
     ).toBeInTheDocument()
     expect(screen.queryByText('Resolution attainment')).not.toBeInTheDocument()
+  })
+
+  it('gives each role a starting view that is theirs', async () => {
+    // A technician opening the application should see work, not a report they cannot read, and a
+    // requester should see their own requests rather than a queue. Hiding these tabs is a
+    // convenience: every request behind them is still authorised server-side.
+    getMetrics.mockResolvedValue(metrics())
+    getTickets.mockResolvedValue([])
+    getCategories.mockResolvedValue(['Hardware'])
+
+    const { unmount } = render(<DashboardPage currentUser={technician} />)
+
+    expect(await screen.findByText('Support queue')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Performance' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Accounts' })).not.toBeInTheDocument()
+
+    unmount()
+
+    render(<DashboardPage currentUser={requester} />)
+
+    expect(await screen.findByText('My requests')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Queue' })).not.toBeInTheDocument()
   })
 
   it('breaks demand down by category so recurring faults are visible', async () => {

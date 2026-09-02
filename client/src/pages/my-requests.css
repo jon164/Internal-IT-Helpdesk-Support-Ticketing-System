@@ -1,0 +1,98 @@
+.request-receipt {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface-1);
+  border-left: 3px solid var(--status-good);
+  border-radius: var(--radius-sm);
+}
+
+.request-receipt p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.request-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 720px;
+}
+
+.request-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.request-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.request-field > span {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.request-field small,
+.request-check small {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.request-field input[type='text'],
+.request-field select,
+.request-field textarea {
+  padding: 9px 11px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+}
+
+.request-field textarea {
+  resize: vertical;
+}
+
+.request-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-sm);
+}
+
+.request-check > span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 14px;
+}
+
+.request-check input {
+  margin-top: 3px;
+}
+
+.request-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.request-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}

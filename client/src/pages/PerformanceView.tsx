@@ -3,6 +3,7 @@ import { ApiError, api } from '../api/client'
 import type { MetricsSummary, User } from '../api/types'
 import { BarChart, type BarDatum } from '../components/charts/BarChart'
 import { Panel } from '../components/Panel'
+import { EmptyDatasetNotice } from '../components/EmptyDatasetNotice'
 import { ReportNotice } from '../components/ReportNotice'
 import { StatTile } from '../components/StatTile'
 import {
@@ -129,6 +130,9 @@ export function PerformanceView({ currentUser }: { currentUser: User }) {
     ]
   }, [metrics])
 
+  // Nothing raised, nothing outstanding: there is no report to draw, only that fact to state.
+  const isEmpty = metrics !== null && metrics.totalCreated === 0 && metrics.openBacklog === 0
+
   return (
     <div className="view">
       <div className="view-filters">
@@ -166,7 +170,12 @@ export function PerformanceView({ currentUser }: { currentUser: User }) {
 
       {error && <ReportNotice error={error} currentUser={currentUser} />}
 
-      {metrics && !loading && (
+      {metrics && !loading && isEmpty && <EmptyDatasetNotice currentUser={currentUser} />}
+
+      {/* The tiles and charts are withheld rather than drawn as a wall of zeroes. Every figure would
+          be accurate and every one of them would mislead: "0 breached" beside a green tick reads as
+          an achievement when the truth is that nothing exists to breach anything. */}
+      {metrics && !loading && !isEmpty && (
         <>
           <div className="tile-grid">
             <StatTile

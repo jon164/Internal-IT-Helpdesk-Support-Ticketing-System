@@ -151,3 +151,59 @@
   color: var(--text-muted) !important;
   font-style: italic;
 }
+
+/* --- Demonstration data ------------------------------------------------- */
+
+.sample-data {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sample-data-state {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.sample-data-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.sample-data-confirm {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 6px 12px;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+/* Destructive actions are coloured, but never colour alone: the word "clear" carries the meaning
+   for anyone who cannot distinguish the hue. */
+.link-button.is-destructive {
+  color: var(--status-critical);
+}
+
+.sample-data-notice {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.sample-data-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.sample-data-hint {
+  color: var(--text-muted);
+  font-size: 13px;
+}

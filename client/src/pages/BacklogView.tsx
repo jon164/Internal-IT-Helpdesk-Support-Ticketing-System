@@ -9,6 +9,7 @@ import {
   type TrendPoint,
 } from '../components/charts/TimeSeriesChart'
 import { Panel } from '../components/Panel'
+import { EmptyDatasetNotice } from '../components/EmptyDatasetNotice'
 import { ReportNotice } from '../components/ReportNotice'
 import { StatTile, type StatTone } from '../components/StatTile'
 import { formatDate, formatDays, formatPercent, formatShortDate } from '../utils/format'
@@ -141,6 +142,14 @@ export function BacklogView({ currentUser }: { currentUser: User }) {
 
   const direction = report ? DIRECTION_COPY[report.direction] : null
 
+  // An empty queue that was also empty at the start of the window is an empty system, not a
+  // cleared one, and a "Shrinking" verdict drawn over nothing would be a false reassurance.
+  const isEmpty =
+    report !== null &&
+    report.unresolvedNow === 0 &&
+    report.unresolvedAtStart === 0 &&
+    report.trend.every((point) => point.raised === 0 && point.resolved === 0)
+
   return (
     <div className="view">
       <div className="view-filters">
@@ -178,7 +187,9 @@ export function BacklogView({ currentUser }: { currentUser: User }) {
 
       {error && <ReportNotice error={error} currentUser={currentUser} />}
 
-      {report && direction && !loading && (
+      {report && !loading && isEmpty && <EmptyDatasetNotice currentUser={currentUser} />}
+
+      {report && direction && !loading && !isEmpty && (
         <>
           <div className="tile-grid">
             <StatTile
