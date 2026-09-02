@@ -1,8 +1,14 @@
 import type {
   ApiProblem,
   BacklogReport,
+  CreateTicketRequest,
   MetricsSummary,
+  SampleDataCleared,
+  SampleDataStatus,
   SlaPolicy,
+  TicketDetail,
+  TicketPriority,
+  TicketStatus,
   TicketSummary,
   User,
   UserAuditEntry,
@@ -104,12 +110,69 @@ export const api = {
       body: JSON.stringify({ isActive, reason }),
     }),
 
+  /**
+   * Demonstration data. These three routes exist only when the API runs in Development — a
+   * production build does not register them at all, so a 404 here is the expected answer rather
+   * than a fault.
+   */
+  getSampleDataStatus: (userId: string) =>
+    request<SampleDataStatus>('/admin/sample-data', userId),
+
+  generateSampleData: (userId: string) =>
+    request<SampleDataStatus>('/admin/sample-data', userId, { method: 'POST' }),
+
+  clearSampleData: (userId: string) =>
+    request<SampleDataCleared>('/admin/sample-data', userId, { method: 'DELETE' }),
+
   getPriorities: () => request<SlaPolicy[]>('/reference/priorities', null),
 
   getTickets: (userId: string, params: Record<string, string> = {}) => {
     const query = new URLSearchParams(params).toString()
     return request<TicketSummary[]>(`/tickets${query ? `?${query}` : ''}`, userId)
   },
+
+  getCategories: () => request<string[]>('/reference/categories', null),
+
+  getTicket: (userId: string, id: number) => request<TicketDetail>(`/tickets/${id}`, userId),
+
+  createTicket: (userId: string, ticket: CreateTicketRequest) =>
+    request<TicketSummary>('/tickets', userId, {
+      method: 'POST',
+      body: JSON.stringify(ticket),
+    }),
+
+  /**
+   * Move a ticket to a new status. The note carries the resolution notes when resolving and the
+   * reason when placing a ticket on hold — the server decides which, and refuses when it is missing.
+   */
+  transitionTicket: (userId: string, id: number, status: TicketStatus, note?: string) =>
+    request<TicketSummary>(`/tickets/${id}/transition`, userId, {
+      method: 'POST',
+      body: JSON.stringify({ status, note: note ?? null }),
+    }),
+
+  assignTicket: (userId: string, id: number, technicianId: string) =>
+    request<TicketSummary>(`/tickets/${id}/assign`, userId, {
+      method: 'POST',
+      body: JSON.stringify({ technicianId }),
+    }),
+
+  changeTicketPriority: (
+    userId: string,
+    id: number,
+    priority: TicketPriority,
+    justification: string,
+  ) =>
+    request<TicketSummary>(`/tickets/${id}/priority`, userId, {
+      method: 'POST',
+      body: JSON.stringify({ priority, justification }),
+    }),
+
+  addTicketComment: (userId: string, id: number, comment: string) =>
+    request<TicketSummary>(`/tickets/${id}/comments`, userId, {
+      method: 'POST',
+      body: JSON.stringify({ comment }),
+    }),
 
   /**
    * The management report. Refused with 403 for anyone but the service manager — the dashboard

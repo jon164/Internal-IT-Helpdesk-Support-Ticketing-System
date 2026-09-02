@@ -1,0 +1,78 @@
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0 0 0 18px;
+  border-left: 2px solid var(--gridline);
+  list-style: none;
+}
+
+.timeline-entry {
+  position: relative;
+  padding: 0 0 18px;
+}
+
+.timeline-entry:last-child {
+  padding-bottom: 0;
+}
+
+/* The marker sits on the rule itself, so the trail reads as one continuous record rather than a
+   stack of unrelated cards. */
+.timeline-entry::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: -25px;
+  width: 10px;
+  height: 10px;
+  background: var(--surface-1);
+  border: 2px solid var(--baseline);
+  border-radius: 50%;
+}
+
+.timeline-entry.event-created::before,
+.timeline-entry.event-firstresponserecorded::before {
+  background: var(--seq-450);
+  border-color: var(--seq-450);
+}
+
+.timeline-entry.event-holdstarted::before {
+  background: var(--status-warning);
+  border-color: var(--status-warning);
+}
+
+.timeline-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.timeline-head strong {
+  font-size: 13px;
+}
+
+.timeline-transition {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.timeline-when {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.timeline-detail {
+  margin: 3px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.timeline-actor {
+  margin: 3px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}

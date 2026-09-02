@@ -1,0 +1,134 @@
+/*
+ * Badges carrying ticket state.
+ *
+ * Two rules hold throughout. Status colours come from the reserved status tokens and are never used
+ * as a chart series; and every badge shows a word, so nothing here depends on the reader
+ * distinguishing one hue from another.
+ */
+
+.sla-badge,
+.status-badge,
+.priority-badge,
+.restricted-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+/* --- SLA state ----------------------------------------------------------- */
+
+.sla-badge {
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+}
+
+.sla-ontrack,
+.sla-met {
+  background: color-mix(in srgb, var(--status-good) 14%, transparent);
+  color: var(--status-good-ink);
+}
+
+.sla-atrisk {
+  background: color-mix(in srgb, var(--status-warning) 22%, transparent);
+  color: var(--text-primary);
+}
+
+.sla-breached,
+.sla-missed {
+  background: color-mix(in srgb, var(--status-critical) 16%, transparent);
+  color: var(--status-critical);
+}
+
+.sla-clock {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sla-clock-caption {
+  min-width: 74px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.sla-clock-remaining {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+/* --- Workflow status ----------------------------------------------------- */
+
+/* Deliberately quiet. Status is a fact about where the ticket sits, not a judgement about whether
+   it is in trouble — that is the SLA badge's job, and giving both loud colours would leave neither
+   meaning anything. */
+.status-badge {
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+}
+
+.status-new {
+  background: color-mix(in srgb, var(--seq-450) 14%, transparent);
+  color: var(--seq-650);
+}
+
+.status-resolved,
+.status-closed {
+  color: var(--text-muted);
+}
+
+.status-cancelled {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+/* --- Priority ------------------------------------------------------------ */
+
+/* The ordinal ramp, matching "Raised by priority" on the dashboard: darkest is most urgent. */
+.priority-badge {
+  color: #ffffff;
+}
+
+.priority-critical {
+  background: var(--seq-650);
+}
+
+.priority-high {
+  background: var(--seq-550);
+}
+
+.priority-standard {
+  background: var(--seq-450);
+}
+
+.priority-low {
+  background: var(--seq-250);
+  color: var(--text-primary);
+}
+
+:root[data-theme='dark'] .priority-critical,
+:root[data-theme='dark'] .priority-low {
+  color: var(--text-primary);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme='light'])) .priority-critical,
+  :root:where(:not([data-theme='light'])) .priority-low {
+    color: var(--text-primary);
+  }
+}
+
+/* --- Restricted ---------------------------------------------------------- */
+
+.restricted-badge {
+  background: transparent;
+  border: 1px dashed var(--baseline);
+  color: var(--text-muted);
+  font-weight: 500;
+}

@@ -1,0 +1,123 @@
+.ticket-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.actions-none {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.actions-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.actions-label {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.actions-buttons,
+.actions-inline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.actions-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.action-chip {
+  padding: 6px 12px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+}
+
+.action-chip:hover:not(:disabled) {
+  border-color: var(--baseline);
+}
+
+.action-chip.is-selected {
+  background: var(--seq-450);
+  border-color: var(--seq-450);
+  color: #ffffff;
+}
+
+.action-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.actions-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--surface-sunken);
+  border-radius: var(--radius-sm);
+}
+
+.actions-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+}
+
+.actions-field > span {
+  color: var(--text-secondary);
+}
+
+.ticket-actions textarea,
+.ticket-actions input[type='text'],
+.ticket-actions select {
+  padding: 8px 10px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+}
+
+.ticket-actions textarea {
+  width: 100%;
+  max-width: 640px;
+  resize: vertical;
+}
+
+.ticket-actions input[type='text'] {
+  min-width: 260px;
+  flex: 1 1 260px;
+}
+
+.actions-confirm {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.actions-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}

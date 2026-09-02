@@ -112,3 +112,27 @@ export function formatDate(iso: string): string {
     year: 'numeric',
   })
 }
+
+/** Date and time, for an audit entry where the hour matters. */
+export function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+/**
+ * How long is left against a target, or how far past it the ticket has gone.
+ *
+ * Negative remaining minutes are reported as "overdue by", not as a minus sign. A technician
+ * scanning a queue should not have to work out what "-431 min" means, and the word carries the
+ * meaning for anyone who cannot distinguish the colour that accompanies it.
+ */
+export function formatRemaining(minutes: number): string {
+  return minutes < 0
+    ? `overdue by ${formatMinutes(Math.abs(minutes))}`
+    : `${formatMinutes(minutes)} left`
+}

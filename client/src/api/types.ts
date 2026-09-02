@@ -74,11 +74,87 @@ export interface TicketSummary {
   status: TicketStatus
   requesterName: string
   department: string
+  /** Sent alongside the name so the client can compare identity without matching on display text. */
+  assignedTechnicianId: string | null
   assignedTechnicianName: string | null
   isRestricted: boolean
   createdAt: string
   response: SlaStatus
   resolution: SlaStatus
+}
+
+export type TicketEventType =
+  | 'Created'
+  | 'StatusChanged'
+  | 'Assigned'
+  | 'Unassigned'
+  | 'PriorityChanged'
+  | 'FirstResponseRecorded'
+  | 'HoldStarted'
+  | 'HoldEnded'
+  | 'CommentAdded'
+  | 'Reopened'
+
+/**
+ * One entry in a ticket's audit trail.
+ *
+ * Append-only by construction — the API exposes no route that edits or deletes one. The record is
+ * the answer to "who changed this, when, and why", which the problem definition names as the thing
+ * a shared mailbox could never provide.
+ */
+export interface TicketEvent {
+  id: number
+  occurredAt: string
+  eventType: TicketEventType
+  actorName: string
+  actorRole: UserRole
+  fromStatus: TicketStatus | null
+  toStatus: TicketStatus | null
+  detail: string
+}
+
+/** A window during which the resolution clock was suspended awaiting somebody outside the team. */
+export interface HoldPeriod {
+  startedAt: string
+  endedAt: string | null
+  reason: string | null
+}
+
+/**
+ * What the server says this caller may do with this ticket.
+ *
+ * Used to decide which controls to render. It is not the enforcement point: every action is
+ * re-checked server-side when attempted, so forging these flags in the browser gains nothing. The
+ * client asks rather than deciding for itself, which is why the rules cannot drift.
+ */
+export interface TicketPermissions {
+  canComment: boolean
+  canChangePriority: boolean
+  canAssignToSelf: boolean
+  canAssignToOthers: boolean
+  allowedNextStatuses: TicketStatus[]
+}
+
+export interface TicketDetail {
+  summary: TicketSummary
+  description: string
+  resolutionNotes: string | null
+  firstRespondedAt: string | null
+  resolvedAt: string | null
+  closedAt: string | null
+  policy: SlaPolicy
+  holdPeriods: HoldPeriod[]
+  events: TicketEvent[]
+  permissions: TicketPermissions
+}
+
+/** The payload for raising a request. Mirrors CreateTicketRequest and its validation. */
+export interface CreateTicketRequest {
+  title: string
+  description: string
+  category: string
+  priority: TicketPriority
+  markRestricted: boolean
 }
 
 /**
@@ -141,6 +217,24 @@ export interface BacklogReport {
   oldestUnresolvedDays: number | null
   oldestUnresolvedReference: string | null
   unresolvedByAssignee: Record<string, number>
+}
+
+/**
+ * The state of the demonstration dataset.
+ *
+ * `isEmpty` comes from the server rather than being derived from `ticketCount` on the client, so
+ * there is one definition of "empty" and the generate button cannot disagree with the endpoint that
+ * enforces it.
+ */
+export interface SampleDataStatus {
+  ticketCount: number
+  isEmpty: boolean
+  generatedCount: number
+}
+
+export interface SampleDataCleared {
+  removedCount: number
+  status: SampleDataStatus
 }
 
 export interface ApiProblem {
