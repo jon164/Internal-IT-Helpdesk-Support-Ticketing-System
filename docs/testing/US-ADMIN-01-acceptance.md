@@ -26,6 +26,8 @@ administrator account — a four-person desk would not employ one.
 | AC-7 | The last active service manager cannot be removed. |
 | AC-8 | Nobody except the service manager can reach account administration. |
 | AC-9 | Every account change is recorded with who, what, when and why, and the record cannot be edited. |
+| AC-10 | The application starts with no tickets, and the service manager can generate or clear the demonstration dataset on demand. |
+| AC-11 | The routes that generate and clear data do not exist in a production build, and are refused for anyone but the service manager in a development one. |
 
 ## Demo accounts
 
@@ -36,6 +38,9 @@ administrator account — a four-person desk would not employ one.
 | Twenty corporate staff | Requesters |
 
 No passwords — see the scope note.
+
+**There are no tickets on a first start.** Accounts are created so somebody can sign in; the ticket
+table is left empty. Generate a dataset from **Accounts → Demonstration data**.
 
 > **If you previously ran a build that had a separate "Devon Ashworth" administrator account**, start
 > the API once more. It removes that account and its audit entries on start-up, and logs that it has
@@ -50,7 +55,8 @@ cd client
 npm run test
 ```
 
-52 tests across five files. `LoginPage.test.tsx` and `AdminView.test.tsx` cover this story.
+92 tests across nine files. `LoginPage.test.tsx`, `AdminView.test.tsx`,
+`SampleDataPanel.test.tsx` and `DashboardPage.test.tsx` cover this story.
 
 Server-side, the API suite covers sign-in, every guard, and the audit trail.
 
@@ -80,21 +86,28 @@ out, a refresh leaves you on the sign-in screen.
 
 ### TC-A03 — Accounts is offered only to the service manager
 **Covers:** AC-8
-**Steps:** Sign in as Maia Thornton and note the tabs. Sign out, sign in as Nikau Ashford, and note
-them again.
-**Expected:** Maia sees **Performance, Backlog, Accounts**. Nikau sees **Performance, Backlog** only
-— and both of those show the server's refusal rather than an empty page.
+**Steps:** Sign in as Maia Thornton and note the tabs. Sign out, sign in as Nikau Ashford, then as a
+requester, and note them again.
+**Expected:** Maia sees **Performance, Backlog, Queue, Accounts, My requests**. Nikau sees **Queue**
+and **My requests**. A requester sees only **My requests**, and therefore no tab bar at all.
 
-The tab being hidden is a convenience, not the control. Confirm the control itself:
+Each role lands on a screen that is theirs: a technician on work, a requester on their own requests, a
+manager on the report. Offering a technician a reporting tab that always refuses is a broken link,
+not a security demonstration.
+
+The tabs are a convenience, not the control — every request behind them is authorised server-side, and
+the reporting view still renders the server's refusal verbatim if it is reached by any other means
+(`DashboardPage.test.tsx` covers both). Confirm the control itself:
 
 ```powershell
 curl.exe -i -H "X-User-Id: tech-nikau" "http://localhost:5099/api/admin/users"
 curl.exe -i -H "X-User-Id: user-01"    "http://localhost:5099/api/admin/users"
 curl.exe -i                            "http://localhost:5099/api/admin/users"
 curl.exe -i -H "X-User-Id: tech-nikau" "http://localhost:5099/api/admin/audit"
+curl.exe -i -H "X-User-Id: tech-nikau" "http://localhost:5099/api/reports/summary"
 ```
 
-**Expected:** 403, 403, 401, 403.
+**Expected:** 403, 403, 401, 403, 403.
 
 ---
 
@@ -154,6 +167,62 @@ the reason. Nothing in the interface edits or deletes an entry.
 
 ---
 
+### TC-A08 — The application starts empty, and fills only when asked
+**Covers:** AC-10
+**Steps:** Stop the API, delete `src/Helpdesk.Api/helpdesk.db`, and start it again. Sign in as Maia
+and look at Performance, then at Accounts.
+**Expected:** The API logs that the ticket table is empty. Performance shows *"No tickets to report
+on"* and draws no tiles or charts — a wall of zeroes with a green tick beside "0 breached" would
+read as an achievement rather than an absence. Accounts shows *Demonstration data* with **No
+tickets** and an enabled **Generate 500 tickets** button.
+
+Press it. Performance and Backlog now report on 500 tickets. Press **Clear all tickets**, confirm,
+and both views return to the empty notice while every account and every account-change entry remains.
+
+*Why this matters for the report: the earlier build seeded 500 tickets automatically at first start,
+which meant a demonstration opened onto data with no visible origin. A reader could not tell what
+was fabricated. Now the fabrication is an explicit, observable act.*
+
+---
+
+### TC-A09 — Data-fabricating routes are absent from a production build
+**Covers:** AC-11
+**Priority:** High — this is the control, and it is stronger than a hidden button.
+**Steps:** With the API running normally (Development), confirm the routes answer. Then run it as
+Production and confirm they are gone while the rest of the API still works.
+
+```powershell
+# Development
+curl.exe -i -H "X-User-Id: lead-maia"  "http://localhost:5099/api/admin/sample-data"
+curl.exe -i -H "X-User-Id: tech-nikau" "http://localhost:5099/api/admin/sample-data"
+curl.exe -i -X POST -H "X-User-Id: tech-nikau" "http://localhost:5099/api/admin/sample-data"
+curl.exe -i -X DELETE -H "X-User-Id: user-01"  "http://localhost:5099/api/admin/sample-data"
+```
+
+**Expected:** 200, 403, 403, 403. A technician and a requester are refused: "only developers run this
+build" is an assumption about deployment, not an access control.
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = "Production"
+dotnet run --project src/Helpdesk.Api
+```
+
+```powershell
+curl.exe -i -H "X-User-Id: lead-maia" "http://localhost:5099/api/admin/users"
+curl.exe -i -H "X-User-Id: lead-maia" "http://localhost:5099/api/admin/sample-data"
+```
+
+**Expected:** **200** and **404**. Account administration still works; the sample-data route does not
+exist. The panel disappears from the interface too — it treats the 404 as the correct answer rather
+than an error.
+
+Remember to clear the variable afterwards: `Remove-Item Env:ASPNETCORE_ENVIRONMENT`.
+
+*A 404 here is a stronger claim than a 403. A route that is never registered cannot be reached by a
+misconfigured role, a forged header, or a future change to the authorisation rules.*
+
+---
+
 ## Result record
 
 | Test case | Date | Tester | Result | Evidence | Notes |
@@ -165,6 +234,9 @@ the reason. Nothing in the interface edits or deletes an entry.
 | TC-A05 | | | | | |
 | TC-A06 | | | | | |
 | TC-A07 | | | | | |
+| TC-A08 | | | | | |
+| TC-A09 | | | | | |
 
-Screenshot TC-A01 (the honesty notice), TC-A03 (the refusal for a technician) and TC-A06 (the lockout
-guard). Those three are what turn "we added a login" into a security argument.
+Screenshot TC-A01 (the honesty notice), TC-A03 (the refusal for a technician), TC-A06 (the lockout
+guard) and TC-A09 (the 404 in a production build). Those four are what turn "we added a login" into a
+security argument.

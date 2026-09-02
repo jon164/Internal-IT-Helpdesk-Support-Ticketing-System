@@ -27,8 +27,9 @@ interpretable, plus the ageing that says whether the queue is stale or merely bu
 
 ## Preconditions
 
-As for US-DASH-01: API on `http://localhost:5099`, client on `http://localhost:5173`, opening as
-**Maia Thornton — Service manager**. Select the **Backlog** tab.
+As for US-DASH-01: API on `http://localhost:5099`, client on `http://localhost:5173`, signed in as
+**Maia Thornton — Service manager**, with the demonstration dataset generated from the **Accounts**
+tab. Select the **Backlog** tab.
 
 ---
 

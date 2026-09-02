@@ -19,13 +19,17 @@
 ## Preconditions
 
 1. `dotnet restore && dotnet build` completes without error.
-2. API running: `dotnet run --project src/Helpdesk.Api` — first run seeds 500 sample tickets.
+2. API running: `dotnet run --project src/Helpdesk.Api`.
 3. Client running: `cd client && npm install && npm run dev`.
-4. Browser at <http://localhost:5173>. The role switcher opens on **Maia Thornton — Service manager**.
+4. Browser at <http://localhost:5173>. Sign in as **Maia Thornton — Service manager**.
+5. **Generate the dataset.** The application starts with no tickets. Open the **Accounts** tab and
+   press **Generate 500 tickets** under *Demonstration data*. Until you do, the Performance view
+   states that there is nothing to report — which is itself worth confirming, and is AC-7 in its
+   strongest form.
 
-The seeded dataset is generated from a fixed random seed, so the figures below are reproducible on
-any machine. Record the actual values on first run and use them as the expected values thereafter;
-they change only if the seeder changes.
+The generated dataset comes from a fixed random seed, so the figures below are reproducible on any
+machine. Record the actual values on first run and use them as the expected values thereafter; they
+change only if the seeder changes.
 
 ---
 
