@@ -125,6 +125,12 @@ export const api = {
     }, role)
   },
 
+  addComment(id: number, author: string, body: string, role: Role) {
+    return request<TicketNote>(`/api/tickets/${id}/notes`, {
+      method: 'POST', body: JSON.stringify({ author, body, isInternal: false }),
+    }, role)
+  },
+
   uploadAttachment(id: number, file: File) {
     const form = new FormData()
     form.append('file', file)

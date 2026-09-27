@@ -155,6 +155,7 @@ public static class TicketEndpoints
                 author = n.AuthorName,
                 body = n.Content,
                 createdAtUtc = n.CreatedAt,
+                isInternal = n.IsInternal,
             }));
         });
 
@@ -172,13 +173,14 @@ public static class TicketEndpoints
             var root = json.RootElement;
             var author = GetString(root, "author") ?? "System";
             var noteBody = GetString(root, "body") ?? string.Empty;
+            var isInternal = root.TryGetProperty("isInternal", out var internalValue) && internalValue.ValueKind == JsonValueKind.True;
 
             if (string.IsNullOrWhiteSpace(noteBody))
             {
                 return Results.BadRequest(new { message = "Note cannot be blank." });
             }
 
-            var note = TicketNote.Create(ticket.Id, author, author, noteBody, false, DateTime.UtcNow);
+            var note = TicketNote.Create(ticket.Id, author, author, noteBody, isInternal, DateTime.UtcNow);
             db.Add(note);
             ticket.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(ct);
@@ -190,6 +192,7 @@ public static class TicketEndpoints
                 author = note.AuthorName,
                 body = note.Content,
                 createdAtUtc = note.CreatedAt,
+                isInternal = note.IsInternal,
             });
         });
 

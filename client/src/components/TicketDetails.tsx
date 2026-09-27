@@ -54,6 +54,9 @@ export function TicketDetails({
   const [noteBody, setNoteBody] =
     useState('')
 
+  const [commentBody, setCommentBody] =
+    useState('')
+
   const [notes, setNotes] =
     useState<TicketNote[]>([])
 
@@ -91,7 +94,7 @@ export function TicketDetails({
 
     setEscalationReason('')
 
-    if (isIT) {
+    if (role === 'Airport Staff' || isIT) {
       void loadNotes(ticket.id)
     } else {
       setNotes([])
@@ -102,12 +105,16 @@ export function TicketDetails({
     ticket?.assignee,
     ticket?.workaround,
     isIT,
+    role,
   ])
 
   async function loadNotes(id: number) {
     try {
+      const loaded = await api.getNotes(id, role)
       setNotes(
-        await api.getNotes(id, role),
+        role === 'Airport Staff'
+          ? loaded.filter(note => !note.isInternal)
+          : loaded,
       )
     } catch {
       setNotes([])
@@ -286,6 +293,55 @@ export function TicketDetails({
       })
     } catch (error) {
       console.error('[TicketDetails] Add note failed', error)
+      setNotice({
+        type: 'error',
+        text: errorText(error),
+      })
+    }
+  }
+
+  async function addComment() {
+    if (!ticket) return
+
+    const content = commentBody.trim()
+    if (!content) {
+      setNotice({
+        type: 'error',
+        text: 'Please enter a comment before submitting it.',
+      })
+      return
+    }
+
+    const author = ticket.reporterName || 'Airport Staff'
+
+    try {
+      console.log('[TicketDetails] Adding comment', { ticketId: ticket.id, author, role })
+      const note = await api.addComment(
+        ticket.id,
+        author,
+        content,
+        role,
+      )
+
+      setCommentBody('')
+      setNotes(current => [
+        ...current,
+        {
+          id: note.id,
+          ticketId: note.ticketId ?? ticket.id,
+          author: note.author,
+          body: note.body,
+          createdAtUtc: note.createdAtUtc,
+          isInternal: false,
+        },
+      ])
+
+      setNotice({
+        type: 'success',
+        text: 'Your comment has been added to the ticket.',
+      })
+    } catch (error) {
+      console.error('[TicketDetails] Add comment failed', error)
       setNotice({
         type: 'error',
         text: errorText(error),
@@ -495,6 +551,63 @@ export function TicketDetails({
           )}
         </div>
       </div>
+
+      {role === 'Airport Staff' && (
+        <div className="notes-box">
+          <h4>Ticket comments</h4>
+
+          <p>
+            Add any extra details or follow-up information for the technician.
+          </p>
+
+          <div className="note-compose">
+            <textarea
+              rows={2}
+              value={commentBody}
+              onChange={event =>
+                setCommentBody(
+                  event.target.value,
+                )
+              }
+              placeholder="Add more context about the issue, what you tried, or what passengers are seeing..."
+            />
+
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={addComment}
+            >
+              Add comment
+            </button>
+          </div>
+
+          <div className="note-list">
+            {notes.map(note => (
+              <article key={note.id}>
+                <div>
+                  <strong>
+                    {note.author}
+                  </strong>
+
+                  <span>
+                    {formatDate(
+                      note.createdAtUtc,
+                    )}
+                  </span>
+                </div>
+
+                <p>{note.body}</p>
+              </article>
+            ))}
+
+            {notes.length === 0 && (
+              <small>
+                No comments yet.
+              </small>
+            )}
+          </div>
+        </div>
+      )}
 
       {isIT && (
         <div className="technician-tools">

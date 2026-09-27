@@ -43,6 +43,7 @@ export type TicketNote = {
   author: string
   body: string
   createdAtUtc: string
+  isInternal?: boolean
 }
 
 export type CreateTicketRequest = {
