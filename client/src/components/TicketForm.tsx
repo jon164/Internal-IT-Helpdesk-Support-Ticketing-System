@@ -31,6 +31,33 @@ const EMPTY_ISSUE = {
   priority: 'Medium' as const,
 }
 
+const QUICK_FILL_EXAMPLES = [
+  {
+    label: 'Kiosk outage',
+    terminal: 'T1',
+    area: 'Gate 14',
+    systemType: 'Kiosk',
+    description: 'Passenger self-check-in kiosk is not responding and passengers are queuing at the counter instead.',
+    passengerImpact: true,
+  },
+  {
+    label: 'WiFi issue',
+    terminal: 'T2',
+    area: 'Lounge A',
+    systemType: 'WiFi',
+    description: 'WiFi connectivity is intermittent in the departure lounge and passengers cannot access boarding updates.',
+    passengerImpact: true,
+  },
+  {
+    label: 'Flight display',
+    terminal: 'T3',
+    area: 'Arrivals hall',
+    systemType: 'Flight Information Display',
+    description: 'Board is blank and cannot refresh; passengers are unsure which gate is active for the next arrivals.',
+    passengerImpact: true,
+  },
+] as const
+
 const ACCOUNT_REPORTER = {
   reporterName: 'Jamie Santos',
   reporterEmail:
@@ -161,6 +188,23 @@ export function TicketForm({
     is kept because it identifies the staff member,
     rather than being part of the IT issue itself.
   */
+  function applyQuickFill(example: (typeof QUICK_FILL_EXAMPLES)[number]) {
+    setForm(current => ({
+      ...current,
+      terminal: example.terminal,
+      area: example.area,
+      systemType: example.systemType,
+      description: example.description,
+      passengerImpact: example.passengerImpact,
+      priority: 'High',
+    }))
+
+    setNotice({
+      type: 'info',
+      text: `Loaded the ${example.label.toLowerCase()} example.`,
+    })
+  }
+
   function clear(showNotice = true) {
     if (
       mode === 'shared' &&
@@ -463,6 +507,29 @@ export function TicketForm({
               </option>
             </select>
           </label>
+        </div>
+
+        <div className="quick-fill-box">
+          <span className="field-label">
+            Quick examples
+          </span>
+
+          <div className="quick-fill-list">
+            {QUICK_FILL_EXAMPLES.map(
+              example => (
+                <button
+                  key={example.label}
+                  type="button"
+                  className="secondary-button"
+                  onClick={() =>
+                    applyQuickFill(example)
+                  }
+                >
+                  {example.label}
+                </button>
+              ),
+            )}
+          </div>
         </div>
 
         <div className="form-grid two">
