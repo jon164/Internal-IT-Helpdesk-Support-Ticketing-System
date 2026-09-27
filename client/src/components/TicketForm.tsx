@@ -79,6 +79,9 @@ export function TicketForm({
       'account',
     )
 
+  const [quickFill, setQuickFill] =
+    useState('')
+
   const [badgeId, setBadgeId] =
     useState('AIR1001')
 
@@ -205,6 +208,22 @@ export function TicketForm({
     })
   }
 
+  function selectQuickFill(value: string) {
+    setQuickFill(value)
+
+    if (!value) {
+      return
+    }
+
+    const example = QUICK_FILL_EXAMPLES.find(
+      item => item.label === value,
+    )
+
+    if (example) {
+      applyQuickFill(example)
+    }
+  }
+
   function clear(showNotice = true) {
     if (
       mode === 'shared' &&
@@ -230,6 +249,7 @@ export function TicketForm({
       })
     }
 
+    setQuickFill('')
     setAttachment(null)
 
     if (fileRef.current) {
@@ -509,28 +529,35 @@ export function TicketForm({
           </label>
         </div>
 
-        <div className="quick-fill-box">
+        <label className="quick-fill-box">
           <span className="field-label">
             Quick examples
           </span>
 
-          <div className="quick-fill-list">
+          <select
+            value={quickFill}
+            onChange={event =>
+              selectQuickFill(
+                event.target.value,
+              )
+            }
+          >
+            <option value="">
+              Choose an example
+            </option>
+
             {QUICK_FILL_EXAMPLES.map(
               example => (
-                <button
+                <option
                   key={example.label}
-                  type="button"
-                  className="secondary-button"
-                  onClick={() =>
-                    applyQuickFill(example)
-                  }
+                  value={example.label}
                 >
                   {example.label}
-                </button>
+                </option>
               ),
             )}
-          </div>
-        </div>
+          </select>
+        </label>
 
         <div className="form-grid two">
           <label>
