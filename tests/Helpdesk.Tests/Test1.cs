@@ -1,6 +1,7 @@
 ﻿using Helpdesk.Api.Services;
 using Helpdesk.Core.Domain;
 using Helpdesk.Data;
+using Helpdesk.Data.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace Helpdesk.Tests;
