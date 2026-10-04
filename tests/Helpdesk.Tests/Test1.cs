@@ -54,4 +54,65 @@ public sealed class TicketServiceTests
         Assert.AreEqual("Newer", result[0].Title);
         Assert.AreEqual("Older", result[1].Title);
     }
+
+    [TestMethod]
+    public async Task GetTicketsAsync_OrdersByPriorityThenAge_WhenSortIsPriorityAge()
+    {
+        var options = new DbContextOptionsBuilder<HelpdeskDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+
+        await using var context = new HelpdeskDbContext(options);
+        var now = DateTime.UtcNow;
+
+        var tickets = new[]
+        {
+            new Ticket
+            {
+                Title = "Medium priority",
+                Description = "medium priority ticket",
+                Priority = TicketPriority.Medium,
+                Type = TicketType.Incident,
+                Status = TicketStatus.New,
+                SubmitterName = "A",
+                SubmitterEmail = "a@example.com",
+                CreatedAt = now.AddHours(-3),
+                UpdatedAt = now.AddHours(-3),
+            },
+            new Ticket
+            {
+                Title = "Newer high priority",
+                Description = "newer high priority ticket",
+                Priority = TicketPriority.High,
+                Type = TicketType.Incident,
+                Status = TicketStatus.New,
+                SubmitterName = "B",
+                SubmitterEmail = "b@example.com",
+                CreatedAt = now.AddHours(-1),
+                UpdatedAt = now.AddHours(-1),
+            },
+            new Ticket
+            {
+                Title = "Older high priority",
+                Description = "older high priority ticket",
+                Priority = TicketPriority.High,
+                Type = TicketType.Incident,
+                Status = TicketStatus.New,
+                SubmitterName = "C",
+                SubmitterEmail = "c@example.com",
+                CreatedAt = now.AddHours(-2),
+                UpdatedAt = now.AddHours(-2),
+            },
+        };
+
+        await context.Tickets.AddRangeAsync(tickets);
+        await context.SaveChangesAsync();
+
+        var service = new TicketService(new TicketRepository(context));
+        var result = await service.GetTicketsAsync("priority-age");
+
+        CollectionAssert.AreEqual(
+            new[] { "Older high priority", "Newer high priority", "Medium priority" },
+            result.Select(ticket => ticket.Title).ToArray());
+    }
 }
