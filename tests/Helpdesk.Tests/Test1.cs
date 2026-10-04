@@ -1,4 +1,5 @@
 ﻿using Helpdesk.Api.Services;
+using Helpdesk.Api.Models;
 using Helpdesk.Core.Domain;
 using Helpdesk.Data;
 using Helpdesk.Data.Repositories;
@@ -114,5 +115,95 @@ public sealed class TicketServiceTests
         CollectionAssert.AreEqual(
             new[] { "Older high priority", "Newer high priority", "Medium priority" },
             result.Select(ticket => ticket.Title).ToArray());
+    }
+
+    [TestMethod]
+    public async Task GetTicketsAsync_OrdersOldestFirst_WhenSortIsOldest()
+    {
+        var options = new DbContextOptionsBuilder<HelpdeskDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+
+        await using var context = new HelpdeskDbContext(options);
+        var now = DateTime.UtcNow;
+        await context.Tickets.AddRangeAsync(
+            CreateTicket("Newest", now.AddHours(-1)),
+            CreateTicket("Oldest", now.AddHours(-3)),
+            CreateTicket("Middle", now.AddHours(-2)));
+        await context.SaveChangesAsync();
+
+        var service = new TicketService(new TicketRepository(context));
+        var result = await service.GetTicketsAsync("oldest");
+
+        CollectionAssert.AreEqual(
+            new[] { "Oldest", "Middle", "Newest" },
+            result.Select(ticket => ticket.Title).ToArray());
+    }
+
+    [TestMethod]
+    public async Task GetTicketAsync_ThrowsNotFound_WhenTicketDoesNotExist()
+    {
+        var options = new DbContextOptionsBuilder<HelpdeskDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+
+        await using var context = new HelpdeskDbContext(options);
+        var service = new TicketService(new TicketRepository(context));
+
+        await AssertThrowsAsync<NotFoundException>(
+            () => service.GetTicketAsync(Guid.NewGuid()));
+    }
+
+    [TestMethod]
+    public async Task ClaimAsync_RejectsInactiveTechnician()
+    {
+        var options = new DbContextOptionsBuilder<HelpdeskDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+
+        await using var context = new HelpdeskDbContext(options);
+        var technician = new Technician
+        {
+            Name = "Inactive technician",
+            Email = "inactive@example.com",
+            IsActive = false,
+        };
+        await context.Technicians.AddAsync(technician);
+        await context.SaveChangesAsync();
+
+        var service = new TicketService(new TicketRepository(context));
+        var exception = await AssertThrowsAsync<DomainValidationException>(
+            () => service.ClaimAsync(Guid.NewGuid(), technician.Id, DateTime.UtcNow));
+
+        Assert.AreEqual("Cannot claim a ticket as an inactive technician.", exception.Message);
+    }
+
+    private static Ticket CreateTicket(string title, DateTime createdAt, TicketPriority priority = TicketPriority.Medium) => new()
+    {
+        Title = title,
+        Description = $"{title} ticket",
+        Priority = priority,
+        Type = TicketType.Incident,
+        Status = TicketStatus.New,
+        SubmitterName = "Test requester",
+        SubmitterEmail = "requester@example.com",
+        CreatedAt = createdAt,
+        UpdatedAt = createdAt,
+    };
+
+    private static async Task<TException> AssertThrowsAsync<TException>(Func<Task> action)
+        where TException : Exception
+    {
+        try
+        {
+            await action();
+        }
+        catch (TException exception)
+        {
+            return exception;
+        }
+
+        Assert.Fail($"Expected {typeof(TException).Name} to be thrown.");
+        throw new AssertFailedException("Expected exception was not thrown.");
     }
 }
