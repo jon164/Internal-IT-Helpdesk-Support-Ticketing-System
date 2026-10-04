@@ -1,0 +1,120 @@
+.ticket-notifications {
+  position: relative;
+}
+
+.ticket-notifications-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.notification-count {
+  min-width: 18px;
+  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 4px;
+  border-radius: 9px;
+  color: var(--surface);
+  background: var(--danger);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ticket-notifications-panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(440px, calc(100vh - 80px));
+  overflow: auto;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+}
+
+.ticket-notifications-panel > header {
+  position: sticky;
+  top: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.ticket-notifications-panel > header strong {
+  font-size: 13px;
+}
+
+.ticket-notifications-panel > header button {
+  padding: 4px 0;
+  color: var(--primary);
+  background: transparent;
+  border: 0;
+  font-size: 11px;
+}
+
+.ticket-notifications-panel > header button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ticket-notifications-panel ul {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.ticket-notifications-panel li + li {
+  border-top: 1px solid var(--border);
+}
+
+.ticket-notification {
+  width: 100%;
+  display: grid;
+  gap: 5px;
+  padding: 12px;
+  color: var(--text);
+  background: var(--primary-soft);
+  border: 0;
+  text-align: left;
+}
+
+.ticket-notification:hover {
+  background: var(--surface-hover);
+}
+
+.ticket-notification.read {
+  background: var(--surface);
+}
+
+.ticket-notification strong {
+  font-size: 12px;
+}
+
+.ticket-notification span,
+.ticket-notification time {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.ticket-notifications-empty {
+  padding: 16px 12px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@media (max-width: 560px) {
+  .ticket-notifications-panel {
+    position: fixed;
+    top: 58px;
+    right: 12px;
+  }
+}

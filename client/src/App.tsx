@@ -4,14 +4,30 @@ import { NoticeBanner } from './components/NoticeBanner'
 import { DashboardPage } from './pages/DashboardPage'
 import { FlightLookupPage } from './pages/FlightLookupPage'
 import { TicketsPage } from './pages/TicketsPage'
+import { TicketNotifications } from './components/TicketNotifications'
 import { api } from './services/api'
-import type { Notice, Role } from './types'
+import type { Notice, Role, TicketNotification } from './types'
 
 type Page = 'tickets' | 'flight' | 'dashboard'
 
 const THEME_KEY = 'airport-helpdesk-theme'
 const SESSION_KEY = 'airport-helpdesk-auth'
 const ROLE_KEY = 'airport-helpdesk-role'
+const NOTIFICATIONS_KEY = 'airport-helpdesk-notifications'
+const NOTIFICATION_SNAPSHOT_KEY = 'airport-helpdesk-notification-snapshot'
+const NOTIFICATION_NOTES_KEY = 'airport-helpdesk-notification-notes'
+const DEMO_REPORTER_EMAIL = 'jamie.santos@airport.test'
+const NOTIFICATION_POLL_INTERVAL = 15_000
+
+function readStoredNotifications(): TicketNotification[] {
+  try {
+    const stored = localStorage.getItem(NOTIFICATIONS_KEY)
+    const parsed: unknown = stored ? JSON.parse(stored) : []
+    return Array.isArray(parsed) ? parsed as TicketNotification[] : []
+  } catch {
+    return []
+  }
+}
 
 const PAGE_LABELS: Record<Page, string> = {
   tickets: 'Tickets',
@@ -27,6 +43,8 @@ export default function App() {
     return (savedRole as Role | null) ?? 'Airport Staff'
   })
   const [page, setPage] = useState<Page>('tickets')
+  const [focusTicketId, setFocusTicketId] = useState<number | null>(null)
+  const [ticketNotifications, setTicketNotifications] = useState<TicketNotification[]>(readStoredNotifications)
   const [isSignedIn, setIsSignedIn] = useState(() => {
     const saved = localStorage.getItem(SESSION_KEY)
     return saved !== 'signed-out'
@@ -59,6 +77,128 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(SESSION_KEY, isSignedIn ? 'signed-in' : 'signed-out')
   }, [isSignedIn])
+
+  useEffect(() => {
+    if (!isSignedIn || role !== 'Airport Staff') return
+
+    let active = true
+    let hasSnapshot = false
+    let previousSnapshot: Record<string, { status: string; assignee: string }> = {}
+    let knownNoteIds = new Set<number>()
+    let notifications = readStoredNotifications()
+
+    try {
+      const snapshot = localStorage.getItem(NOTIFICATION_SNAPSHOT_KEY)
+      if (snapshot) {
+        previousSnapshot = JSON.parse(snapshot) as typeof previousSnapshot
+        hasSnapshot = true
+      }
+      knownNoteIds = new Set(JSON.parse(localStorage.getItem(NOTIFICATION_NOTES_KEY) ?? '[]') as number[])
+    } catch {
+      hasSnapshot = false
+    }
+
+    async function refreshNotifications() {
+      try {
+        const tickets = await api.getTickets('newest')
+        const ownedTickets = tickets.filter(ticket => ticket.reporterEmail.toLowerCase() === DEMO_REPORTER_EMAIL)
+        const nextSnapshot: Record<string, { status: string; assignee: string }> = {}
+        const nextKnownNoteIds = new Set(knownNoteIds)
+        const additions: TicketNotification[] = []
+
+        const publicNotes = await Promise.all(ownedTickets.map(async ticket => {
+          try {
+            const notes = await api.getNotes(ticket.id, role)
+            return { ticket, notes: notes.filter(note => !note.isInternal && note.author !== ticket.reporterName) }
+          } catch {
+            return { ticket, notes: [] }
+          }
+        }))
+
+        for (const ticket of ownedTickets) {
+          const key = String(ticket.id)
+          const current = { status: ticket.status, assignee: ticket.assignee }
+          const previous = previousSnapshot[key]
+          nextSnapshot[key] = current
+
+          if (hasSnapshot && previous && previous.status !== current.status) {
+            const detectedAt = new Date().toISOString()
+            additions.push({
+              id: `status:${key}:${detectedAt}:${current.status}`,
+              ticketId: ticket.id,
+              title: `Ticket #${ticket.id} status updated`,
+              message: `Status changed to ${ticket.status}.`,
+              createdAtUtc: detectedAt,
+              isRead: false,
+            })
+          }
+
+          if (hasSnapshot && previous && previous.assignee !== current.assignee && current.assignee !== 'Unassigned') {
+            const detectedAt = new Date().toISOString()
+            additions.push({
+              id: `assignment:${key}:${detectedAt}:${current.assignee}`,
+              ticketId: ticket.id,
+              title: `Ticket #${ticket.id} assigned`,
+              message: `Assigned to ${current.assignee}.`,
+              createdAtUtc: detectedAt,
+              isRead: false,
+            })
+          }
+        }
+
+        for (const { ticket, notes } of publicNotes) {
+          for (const note of notes) {
+            if (hasSnapshot && !knownNoteIds.has(note.id)) {
+              additions.push({
+                id: `reply:${note.id}`,
+                ticketId: ticket.id,
+                title: `New reply on ticket #${ticket.id}`,
+                message: `${note.author} responded to your ticket.`,
+                createdAtUtc: note.createdAtUtc,
+                isRead: false,
+              })
+            }
+            nextKnownNoteIds.add(note.id)
+          }
+        }
+
+        if (!active) return
+
+        const existingIds = new Set(notifications.map(notification => notification.id))
+        notifications = [...additions.filter(notification => !existingIds.has(notification.id)), ...notifications].slice(0, 100)
+        previousSnapshot = nextSnapshot
+        knownNoteIds = nextKnownNoteIds
+        hasSnapshot = true
+        localStorage.setItem(NOTIFICATION_SNAPSHOT_KEY, JSON.stringify(nextSnapshot))
+        localStorage.setItem(NOTIFICATION_NOTES_KEY, JSON.stringify([...nextKnownNoteIds]))
+        localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(notifications))
+        setTicketNotifications(notifications)
+      } catch {
+        // Keep the existing notification list available when the API is offline.
+      }
+    }
+
+    void refreshNotifications()
+    const interval = window.setInterval(() => void refreshNotifications(), NOTIFICATION_POLL_INTERVAL)
+
+    return () => {
+      active = false
+      window.clearInterval(interval)
+    }
+  }, [isSignedIn, role])
+
+  function markNotificationsRead() {
+    const updated = ticketNotifications.map(notification => ({ ...notification, isRead: true }))
+    setTicketNotifications(updated)
+    localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(updated))
+  }
+
+  function openNotificationTicket(ticketId: number) {
+    markNotificationsRead()
+    setFocusTicketId(ticketId)
+    setPage('tickets')
+    setNotice(null)
+  }
 
   async function signIn(next: Role) {
     try {
@@ -264,6 +404,14 @@ export default function App() {
           </div>
 
           <div className="topbar-actions">
+            {role === 'Airport Staff' && (
+              <TicketNotifications
+                notifications={ticketNotifications}
+                onMarkAllRead={markNotificationsRead}
+                onOpenTicket={openNotificationTicket}
+              />
+            )}
+
             <label className="role-switcher">
               <span>Demo role</span>
 
@@ -354,8 +502,10 @@ export default function App() {
 
           {page === 'tickets' && (
             <TicketsPage
+              key={`${role}:${focusTicketId ?? 'tickets'}`}
               role={role}
               setNotice={setNotice}
+              focusTicketId={focusTicketId}
             />
           )}
 

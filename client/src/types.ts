@@ -46,6 +46,15 @@ export type TicketNote = {
   isInternal?: boolean
 }
 
+export type TicketNotification = {
+  id: string
+  ticketId: number
+  title: string
+  message: string
+  createdAtUtc: string
+  isRead: boolean
+}
+
 export type CreateTicketRequest = {
   terminal: string
   area: string

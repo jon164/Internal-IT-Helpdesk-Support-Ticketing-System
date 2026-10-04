@@ -24,6 +24,17 @@ import {
   STATUS_OPTIONS,
 } from '../utils'
 
+async function getTicketNotes(id: number, role: Role): Promise<TicketNote[]> {
+  try {
+    const loaded = await api.getNotes(id, role)
+    return role === 'Airport Staff'
+      ? loaded.filter(note => !note.isInternal)
+      : loaded
+  } catch {
+    return []
+  }
+}
+
 export function TicketDetails({
   ticket,
   role,
@@ -38,13 +49,13 @@ export function TicketDetails({
   setNotice: (notice: Notice) => void
 }) {
   const [status, setStatus] =
-    useState<TicketStatus>('New')
+    useState<TicketStatus>(ticket?.status ?? 'New')
 
   const [assignee, setAssignee] =
-    useState('Unassigned')
+    useState(ticket?.assignee ?? 'Unassigned')
 
   const [workaround, setWorkaround] =
-    useState('')
+    useState(ticket?.workaround ?? '')
 
   const [
     escalationReason,
@@ -55,6 +66,9 @@ export function TicketDetails({
     useState('')
 
   const [commentBody, setCommentBody] =
+    useState('')
+
+  const [replyBody, setReplyBody] =
     useState('')
 
   const [notes, setNotes] =
@@ -85,40 +99,18 @@ export function TicketDetails({
   useEffect(() => {
     if (!ticket) return
 
-    setStatus(ticket.status)
-    setAssignee(ticket.assignee)
+    let active = true
+    void getTicketNotes(ticket.id, role).then(loaded => {
+      if (active) setNotes(loaded)
+    })
 
-    setWorkaround(
-      ticket.workaround ?? '',
-    )
-
-    setEscalationReason('')
-
-    if (role === 'Airport Staff' || isIT) {
-      void loadNotes(ticket.id)
-    } else {
-      setNotes([])
+    return () => {
+      active = false
     }
-  }, [
-    ticket?.id,
-    ticket?.status,
-    ticket?.assignee,
-    ticket?.workaround,
-    isIT,
-    role,
-  ])
+  }, [ticket?.id, role])
 
   async function loadNotes(id: number) {
-    try {
-      const loaded = await api.getNotes(id, role)
-      setNotes(
-        role === 'Airport Staff'
-          ? loaded.filter(note => !note.isInternal)
-          : loaded,
-      )
-    } catch {
-      setNotes([])
-    }
+    setNotes(await getTicketNotes(id, role))
   }
 
   function errorText(error: unknown) {
@@ -346,6 +338,36 @@ export function TicketDetails({
         type: 'error',
         text: errorText(error),
       })
+    }
+  }
+
+  async function replyToEmployee() {
+    if (!ticket) return
+
+    const content = replyBody.trim()
+    if (!content) {
+      setNotice({ type: 'error', text: 'Enter a reply before sending it.' })
+      return
+    }
+
+    const author = ticket.assignee !== 'Unassigned'
+      ? ticket.assignee
+      : technicians[0]?.name ?? 'IT Technician'
+
+    try {
+      const note = await api.addComment(ticket.id, author, content, role)
+      setReplyBody('')
+      setNotes(current => [...current, {
+        id: note.id,
+        ticketId: note.ticketId ?? ticket.id,
+        author: note.author,
+        body: note.body,
+        createdAtUtc: note.createdAtUtc,
+        isInternal: false,
+      }])
+      setNotice({ type: 'success', text: 'Your reply has been sent to the employee.' })
+    } catch (error) {
+      setNotice({ type: 'error', text: errorText(error) })
     }
   }
 
@@ -753,6 +775,26 @@ export function TicketDetails({
             >
               Escalate ticket
             </button>
+          </div>
+
+          <div className="notes-box">
+            <h4>Reply to employee</h4>
+            <p>This response is visible to the ticket submitter and creates an update notification.</p>
+            <div className="note-compose">
+              <textarea
+                rows={2}
+                value={replyBody}
+                onChange={event => setReplyBody(event.target.value)}
+                placeholder="Write a response or request for the employee..."
+              />
+              <button
+                type="button"
+                className="primary-button"
+                onClick={replyToEmployee}
+              >
+                Send reply
+              </button>
+            </div>
           </div>
 
           <div className="notes-box">

@@ -20,15 +20,17 @@ import type {
 export function TicketsPage({
   role,
   setNotice,
+  focusTicketId,
 }: {
   role: Role
   setNotice: (notice: Notice) => void
+  focusTicketId: number | null
 }) {
   const [tickets, setTickets] =
     useState<Ticket[]>([])
 
   const [selectedId, setSelectedId] =
-    useState<number | null>(null)
+    useState<number | null>(focusTicketId)
 
   /*
     USER STORY:
@@ -51,14 +53,6 @@ export function TicketsPage({
       ) ?? null,
     [tickets, selectedId],
   )
-
-  useEffect(() => {
-    setSort(
-      role === 'IT Technician'
-        ? 'priority-age'
-        : 'newest',
-    )
-  }, [role])
 
   /*
     Reload tickets when the sort option changes.
@@ -187,6 +181,7 @@ export function TicketsPage({
         />
 
         <TicketDetails
+          key={`${selected?.id ?? 'none'}:${selected?.status ?? ''}:${selected?.assignee ?? ''}:${selected?.workaround ?? ''}:${role}`}
           ticket={selected}
           role={role}
           onChanged={changed}
