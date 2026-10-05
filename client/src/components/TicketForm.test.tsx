@@ -20,6 +20,91 @@ describe(
   'TicketForm attachment validation',
   () => {
     it(
+  'clears ticket issue fields without creating a ticket',
+  () => {
+    const setNotice = vi.fn()
+    const onCreated = vi.fn()
+
+    const {
+      container,
+      getByRole,
+    } = render(
+      <TicketForm
+        onCreated={onCreated}
+        setNotice={setNotice}
+      />,
+    )
+
+    const terminal =
+      container.querySelector(
+        'select[name="terminal"]',
+      ) as HTMLSelectElement
+
+    const area =
+      container.querySelector(
+        'input[name="area"]',
+      ) as HTMLInputElement
+
+    const systemType =
+      container.querySelector(
+        'select[name="systemType"]',
+      ) as HTMLSelectElement
+
+    const description =
+      container.querySelector(
+        'textarea[name="description"]',
+      ) as HTMLTextAreaElement
+
+    fireEvent.change(terminal, {
+      target: {
+        value: 'T1',
+      },
+    })
+
+    fireEvent.change(area, {
+      target: {
+        value: 'Gate 14',
+      },
+    })
+
+    fireEvent.change(systemType, {
+      target: {
+        value: 'Kiosk',
+      },
+    })
+
+    fireEvent.change(description, {
+      target: {
+        value:
+          'Test kiosk problem',
+      },
+    })
+
+    fireEvent.click(
+      getByRole('button', {
+        name: 'Clear form',
+      }),
+    )
+
+    expect(terminal.value).toBe('')
+    expect(area.value).toBe('')
+    expect(systemType.value).toBe('')
+    expect(description.value).toBe('')
+
+    expect(
+      onCreated,
+    ).not.toHaveBeenCalled()
+
+    expect(
+      setNotice,
+    ).toHaveBeenCalledWith({
+      type: 'info',
+      text:
+        'Form cleared. No ticket was created.',
+    })
+  },
+)
+    it(
       'accepts a JPG attachment smaller than 5 MB',
       () => {
         const setNotice = vi.fn()
