@@ -31,13 +31,25 @@ const EMPTY_ISSUE = {
   priority: 'Medium' as const,
 }
 
+// Assessment 2 improvement:
+// Attachments must really follow the
+// JPG/PNG and 5 MB rule shown in the UI.
+const MAX_ATTACHMENT_SIZE =
+  5 * 1024 * 1024
+
+const ALLOWED_ATTACHMENT_TYPES = [
+  'image/jpeg',
+  'image/png',
+]
+
 const QUICK_FILL_EXAMPLES = [
   {
     label: 'Kiosk outage',
     terminal: 'T1',
     area: 'Gate 14',
     systemType: 'Kiosk',
-    description: 'Passenger self-check-in kiosk is not responding and passengers are queuing at the counter instead.',
+    description:
+      'Passenger self-check-in kiosk is not responding and passengers are queuing at the counter instead.',
     passengerImpact: true,
   },
   {
@@ -45,15 +57,18 @@ const QUICK_FILL_EXAMPLES = [
     terminal: 'T2',
     area: 'Lounge A',
     systemType: 'WiFi',
-    description: 'WiFi connectivity is intermittent in the departure lounge and passengers cannot access boarding updates.',
+    description:
+      'WiFi connectivity is intermittent in the departure lounge and passengers cannot access boarding updates.',
     passengerImpact: true,
   },
   {
     label: 'Flight display',
     terminal: 'T3',
     area: 'Arrivals hall',
-    systemType: 'Flight Information Display',
-    description: 'Board is blank and cannot refresh; passengers are unsure which gate is active for the next arrivals.',
+    systemType:
+      'Flight Information Display',
+    description:
+      'Board is blank and cannot refresh; passengers are unsure which gate is active for the next arrivals.',
     passengerImpact: true,
   },
 ] as const
@@ -90,6 +105,16 @@ export function TicketForm({
 
   const [attachment, setAttachment] =
     useState<File | null>(null)
+
+  // Assessment 2 improvement:
+  // Shows the user when a ticket is
+  // currently being submitted.
+  const [isSubmitting, setIsSubmitting] =
+    useState(false)
+
+  // This immediately blocks another
+  // submission before React state updates.
+  const submittingRef = useRef(false)
 
   const fileRef =
     useRef<HTMLInputElement | null>(
@@ -185,46 +210,58 @@ export function TicketForm({
   /*
     USER STORY: Clear Ticket Form
 
-    Ticket information and attachment are reset.
+    Ticket information and attachment
+    are reset.
 
-    The logged-in or verified reporter identity
-    is kept because it identifies the staff member,
-    rather than being part of the IT issue itself.
+    The logged-in or verified reporter
+    identity is kept because it identifies
+    the staff member rather than being
+    part of the IT issue itself.
   */
-  function applyQuickFill(example: (typeof QUICK_FILL_EXAMPLES)[number]) {
+  function applyQuickFill(
+    example:
+      (typeof QUICK_FILL_EXAMPLES)[number],
+  ) {
     setForm(current => ({
       ...current,
       terminal: example.terminal,
       area: example.area,
       systemType: example.systemType,
       description: example.description,
-      passengerImpact: example.passengerImpact,
+      passengerImpact:
+        example.passengerImpact,
       priority: 'High',
     }))
 
     setNotice({
       type: 'info',
-      text: `Loaded the ${example.label.toLowerCase()} example.`,
+      text:
+        `Loaded the ${example.label.toLowerCase()} example.`,
     })
   }
 
-  function selectQuickFill(value: string) {
+  function selectQuickFill(
+    value: string,
+  ) {
     setQuickFill(value)
 
     if (!value) {
       return
     }
 
-    const example = QUICK_FILL_EXAMPLES.find(
-      item => item.label === value,
-    )
+    const example =
+      QUICK_FILL_EXAMPLES.find(
+        item => item.label === value,
+      )
 
     if (example) {
       applyQuickFill(example)
     }
   }
 
-  function clear(showNotice = true) {
+  function clear(
+    showNotice = true,
+  ) {
     if (
       mode === 'shared' &&
       verified
@@ -235,7 +272,9 @@ export function TicketForm({
         reporterEmail: verified.email,
         staffId: verified.badgeId,
       })
-    } else if (mode === 'account') {
+    } else if (
+      mode === 'account'
+    ) {
       setForm({
         ...EMPTY_ISSUE,
         ...ACCOUNT_REPORTER,
@@ -265,10 +304,79 @@ export function TicketForm({
     }
   }
 
+  /*
+    Assessment 2 improvement:
+    Validate an attachment before it
+    is sent to the backend.
+  */
+  function handleAttachmentChange(
+    event:
+      ChangeEvent<HTMLInputElement>,
+  ) {
+    const file =
+      event.target.files?.[0] ??
+      null
+
+    if (!file) {
+      setAttachment(null)
+      return
+    }
+
+    if (
+      !ALLOWED_ATTACHMENT_TYPES.includes(
+        file.type,
+      )
+    ) {
+      setAttachment(null)
+      event.target.value = ''
+
+      setNotice({
+        type: 'error',
+        text:
+          'Only JPG and PNG files are allowed.',
+      })
+
+      return
+    }
+
+    if (
+      file.size >
+      MAX_ATTACHMENT_SIZE
+    ) {
+      setAttachment(null)
+      event.target.value = ''
+
+      setNotice({
+        type: 'error',
+        text:
+          'Attachment must be 5 MB or smaller.',
+      })
+
+      return
+    }
+
+    setAttachment(file)
+
+    setNotice({
+      type: 'info',
+      text:
+        `${file.name} is ready to upload.`,
+    })
+  }
+
   async function submit(
     event: FormEvent,
   ) {
     event.preventDefault()
+
+    /*
+      Assessment 2 improvement:
+      Prevent double-clicking the submit
+      button from creating duplicate tickets.
+    */
+    if (submittingRef.current) {
+      return
+    }
 
     if (
       mode === 'shared' &&
@@ -283,14 +391,16 @@ export function TicketForm({
       return
     }
 
+    submittingRef.current = true
+    setIsSubmitting(true)
+
     try {
       /*
-        USER STORY:
-        Successful submission confirmation.
+        Successful Submission Confirmation
 
-        We wait for the backend first.
-        A success message is NOT shown
-        unless createTicket succeeds.
+        The success message is only shown
+        after the backend successfully
+        creates the ticket.
       */
       const result =
         await api.createTicket(form)
@@ -299,33 +409,54 @@ export function TicketForm({
       let text = result.message
 
       if (attachment) {
-        const upload =
-          await api.uploadAttachment(
-            ticket.id,
-            attachment,
-          )
+        try {
+          const upload =
+            await api.uploadAttachment(
+              ticket.id,
+              attachment,
+            )
 
-        ticket = upload.ticket
+          ticket = upload.ticket
 
-        text += ` ${upload.message}`
+          text +=
+            ` ${upload.message}`
+        } catch (error) {
+          /*
+            The ticket already exists at
+            this point.
+
+            We therefore do not tell the
+            user to submit the whole ticket
+            again because that could create
+            a duplicate.
+          */
+          clear(false)
+
+          await onCreated(ticket)
+
+          setNotice({
+            type: 'error',
+            text:
+              'Ticket was created, but the attachment could not be uploaded.',
+          })
+
+          return
+        }
       }
 
       /*
-        USER STORY:
         Automatic Creation Date/Time
 
         There is intentionally no date/time
         input in this form.
 
         The backend creates createdAtUtc
-        automatically and returns it as
-        part of the created ticket.
+        automatically and returns it with
+        the created ticket.
       */
 
       clear(false)
 
-      // Success appears only after
-      // the backend operation succeeds.
       setNotice({
         type: 'success',
         text,
@@ -340,6 +471,9 @@ export function TicketForm({
             ? error.message
             : 'Ticket submission failed.',
       })
+    } finally {
+      submittingRef.current = false
+      setIsSubmitting(false)
     }
   }
 
@@ -373,6 +507,7 @@ export function TicketForm({
           onClick={() =>
             changeMode('account')
           }
+          disabled={isSubmitting}
         >
           Personal account
         </button>
@@ -387,6 +522,7 @@ export function TicketForm({
           onClick={() =>
             changeMode('shared')
           }
+          disabled={isSubmitting}
         >
           Shared terminal / Badge ID
         </button>
@@ -402,6 +538,7 @@ export function TicketForm({
             <div className="inline-input">
               <input
                 value={badgeId}
+                disabled={isSubmitting}
                 onChange={event => {
                   setBadgeId(
                     event.target.value,
@@ -416,6 +553,7 @@ export function TicketForm({
                 type="button"
                 className="secondary-button"
                 onClick={verifyBadge}
+                disabled={isSubmitting}
               >
                 Verify badge
               </button>
@@ -447,13 +585,16 @@ export function TicketForm({
       >
         <div className="form-grid three">
           <label>
-            <span>Terminal *</span>
+            <span>
+              Terminal *
+            </span>
 
             <select
               required
               name="terminal"
               value={form.terminal}
               onChange={update}
+              disabled={isSubmitting}
             >
               <option value="">
                 Select terminal
@@ -474,13 +615,16 @@ export function TicketForm({
           </label>
 
           <label>
-            <span>Gate / Area *</span>
+            <span>
+              Gate / Area *
+            </span>
 
             <input
               required
               name="area"
               value={form.area}
               onChange={update}
+              disabled={isSubmitting}
               placeholder="e.g. Gate 14"
             />
           </label>
@@ -495,12 +639,15 @@ export function TicketForm({
               name="systemType"
               value={form.systemType}
               onChange={update}
+              disabled={isSubmitting}
             >
               <option value="">
                 Select system
               </option>
 
-              <option>Kiosk</option>
+              <option>
+                Kiosk
+              </option>
 
               <option>
                 Flight Information Display
@@ -536,6 +683,7 @@ export function TicketForm({
 
           <select
             value={quickFill}
+            disabled={isSubmitting}
             onChange={event =>
               selectQuickFill(
                 event.target.value,
@@ -561,12 +709,15 @@ export function TicketForm({
 
         <div className="form-grid two">
           <label>
-            <span>Priority</span>
+            <span>
+              Priority
+            </span>
 
             <select
               name="priority"
               value={form.priority}
               onChange={update}
+              disabled={isSubmitting}
             >
               {PRIORITY_OPTIONS.map(
                 priority => (
@@ -594,6 +745,7 @@ export function TicketForm({
                   form.passengerImpact
                 }
                 onChange={update}
+                disabled={isSubmitting}
               />
 
               Passenger impact
@@ -607,6 +759,7 @@ export function TicketForm({
                   form.flightOpsImpact
                 }
                 onChange={update}
+                disabled={isSubmitting}
               />
 
               Flight operations impact
@@ -615,13 +768,16 @@ export function TicketForm({
         </div>
 
         <label>
-          <span>Description *</span>
+          <span>
+            Description *
+          </span>
 
           <textarea
             required
             name="description"
             value={form.description}
             onChange={update}
+            disabled={isSubmitting}
             rows={4}
             placeholder="Describe what is wrong, what you can see, and any immediate impact."
           />
@@ -629,7 +785,9 @@ export function TicketForm({
 
         <div className="form-grid two">
           <label>
-            <span>Reporter name</span>
+            <span>
+              Reporter name
+            </span>
 
             <input
               required
@@ -639,13 +797,16 @@ export function TicketForm({
               }
               onChange={update}
               disabled={
-                mode === 'shared'
+                mode === 'shared' ||
+                isSubmitting
               }
             />
           </label>
 
           <label>
-            <span>Reporter email</span>
+            <span>
+              Reporter email
+            </span>
 
             <input
               required
@@ -656,7 +817,8 @@ export function TicketForm({
               }
               onChange={update}
               disabled={
-                mode === 'shared'
+                mode === 'shared' ||
+                isSubmitting
               }
             />
           </label>
@@ -677,11 +839,9 @@ export function TicketForm({
             ref={fileRef}
             type="file"
             accept=".jpg,.jpeg,.png,image/jpeg,image/png"
-            onChange={event =>
-              setAttachment(
-                event.target.files?.[0] ??
-                  null,
-              )
+            disabled={isSubmitting}
+            onChange={
+              handleAttachmentChange
             }
           />
 
@@ -706,16 +866,18 @@ export function TicketForm({
           <button
             className="primary-button"
             type="submit"
+            disabled={isSubmitting}
           >
-            Submit ticket
+            {isSubmitting
+              ? 'Submitting...'
+              : 'Submit ticket'}
           </button>
 
-          {/* USER STORY:
-              Clear Ticket Form */}
           <button
             className="secondary-button"
             type="button"
             onClick={() => clear()}
+            disabled={isSubmitting}
           >
             Clear form
           </button>
