@@ -30,7 +30,7 @@ jobs:
       - name: Build and run backend tests
         run: dotnet test Helpdesk.slnx --configuration Release --logger "console;verbosity=normal"
 
-      - name: Start API and verify technician endpoint
+      - name: Start API, verify technician endpoint and authentication
         shell: bash
         run: |
           set -euo pipefail
@@ -54,7 +54,8 @@ jobs:
               http://127.0.0.1:5099/api/technicians \
               | jq -e 'type == "array"' >/dev/null; then
               echo "API smoke check passed: /api/technicians returned a JSON array."
-              exit 0
+              ready=1
+              break
             fi
 
             if ! kill -0 "$api_pid" 2>/dev/null; then
@@ -66,12 +67,39 @@ jobs:
             sleep 2
           done
 
-          cat "$log_file"
-          echo "API did not become ready within 60 seconds." >&2
-          exit 1
+          if [ "${ready:-0}" != 1 ]; then
+            cat "$log_file"
+            echo "API did not become ready within 60 seconds." >&2
+            exit 1
+          fi
+
+          base=http://127.0.0.1:5099
+          expect_status() {
+            local expected=$1 description=$2; shift 2
+            local actual
+            actual=$(curl --silent --output /dev/null --write-out '%{http_code}' "$@")
+            if [ "$actual" != "$expected" ]; then
+              echo "FAIL: $description — expected HTTP $expected, got $actual" >&2
+              exit 1
+            fi
+            echo "PASS: $description (HTTP $actual)"
+          }
+
+          # Security smoke checks against the real running API (Production environment, so
+          # no demo passwords are configured and no account should be able to sign in).
+          expect_status 401 "/api/auth/me without a token is refused" "$base/api/auth/me"
+          expect_status 401 "Naming an account in X-User-Id no longer grants access" -H "X-User-Id: it-manager" "$base/api/dashboard"
+          expect_status 401 "A made-up bearer token is refused" -H "Authorization: Bearer forged" "$base/api/dashboard"
+          expect_status 400 "Sign-in with blank credentials is rejected" -X POST -H "Content-Type: application/json" -d '{"username":"","password":""}' "$base/api/auth/login"
+          expect_status 401 "Development demo password does not work outside Development" -X POST -H "Content-Type: application/json" -d '{"username":"it-manager","password":"Manager#Demo2026"}' "$base/api/auth/login"
+
+          cache_control=$(curl --silent --output /dev/null --dump-header - -X POST -H "Content-Type: application/json" \
+            -d '{"username":"nobody","password":"x"}' "$base/api/auth/login" | tr -d '\r' | grep -i '^cache-control:' || true)
+          echo "$cache_control" | grep -qi 'no-store' || { echo "FAIL: login response must send Cache-Control: no-store (got '$cache_control')" >&2; exit 1; }
+          echo "PASS: login response is not cacheable"
 
   client:
-    name: Client build and lint
+    name: Client build, lint and tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -95,3 +123,6 @@ jobs:
 
       - name: Lint client
         run: npm run lint
+
+      - name: Run client tests (Vitest + axe-core accessibility checks)
+        run: npm test
