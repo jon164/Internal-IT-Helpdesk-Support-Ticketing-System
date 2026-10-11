@@ -11,38 +11,18 @@ public static class DashboardEndpoints
 {
     public static void MapDashboardEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api");
+        // Every route in this group is manager-only. The check lives in one filter on the group,
+        // not in each handler, so a route added here later cannot forget it.
+        var group = app.MapGroup("/api").AddEndpointFilter<RequireManagerFilter>();
 
-        group.MapGet("/dashboard", async (HttpContext context, HelpdeskDbContext db, CancellationToken ct) =>
+        group.MapGet("/dashboard", async (HelpdeskDbContext db, CancellationToken ct) =>
         {
-            var actor = ActorMiddleware.Current(context);
-            if (actor is null)
-            {
-                return Results.Json(new { error = "Unauthenticated", message = "Sign in to continue." }, statusCode: StatusCodes.Status401Unauthorized);
-            }
-
-            if (actor.Role != UserRole.TeamLead)
-            {
-                return Results.Json(new { error = "Forbidden", message = "Manager dashboard access is restricted to the IT Manager." }, statusCode: StatusCodes.Status403Forbidden);
-            }
-
             var tickets = await db.Tickets.Include(t => t.AssignedTechnician).ToListAsync(ct);
             return Results.Ok(BuildMetrics(tickets));
         });
 
-        group.MapGet("/dashboard/tickets", async (HttpContext context, HelpdeskDbContext db, string? status, string? priority, string? assignee, CancellationToken ct) =>
+        group.MapGet("/dashboard/tickets", async (HelpdeskDbContext db, string? status, string? priority, string? assignee, CancellationToken ct) =>
         {
-            var actor = ActorMiddleware.Current(context);
-            if (actor is null)
-            {
-                return Results.Json(new { error = "Unauthenticated", message = "Sign in to continue." }, statusCode: StatusCodes.Status401Unauthorized);
-            }
-
-            if (actor.Role != UserRole.TeamLead)
-            {
-                return Results.Json(new { error = "Forbidden", message = "Manager dashboard access is restricted to the IT Manager." }, statusCode: StatusCodes.Status403Forbidden);
-            }
-
             var tickets = await db.Tickets.Include(t => t.AssignedTechnician).ToListAsync(ct);
             
             // Apply filters
@@ -68,19 +48,8 @@ public static class DashboardEndpoints
             return Results.Ok(tickets.Select(MapTicketRow).ToList());
         });
 
-        group.MapGet("/dashboard/export", async (HttpContext context, HelpdeskDbContext db, string? status, string? priority, string? assignee, CancellationToken ct) =>
+        group.MapGet("/dashboard/export", async (HelpdeskDbContext db, string? status, string? priority, string? assignee, CancellationToken ct) =>
         {
-            var actor = ActorMiddleware.Current(context);
-            if (actor is null)
-            {
-                return Results.Json(new { error = "Unauthenticated", message = "Sign in to continue." }, statusCode: StatusCodes.Status401Unauthorized);
-            }
-
-            if (actor.Role != UserRole.TeamLead)
-            {
-                return Results.Json(new { error = "Forbidden", message = "Manager dashboard access is restricted to the IT Manager." }, statusCode: StatusCodes.Status403Forbidden);
-            }
-
             var tickets = await db.Tickets.Include(t => t.AssignedTechnician).ToListAsync(ct);
             
             // Apply filters
@@ -107,19 +76,8 @@ public static class DashboardEndpoints
             return Results.File(Encoding.UTF8.GetBytes(csv), "text/csv; charset=utf-8", "airport-helpdesk-dashboard.csv");
         });
 
-        group.MapPost("/demo/performance-data", async (HttpContext context, HelpdeskDbContext db, int? count, CancellationToken ct) =>
+        group.MapPost("/demo/performance-data", async (HelpdeskDbContext db, int? count, CancellationToken ct) =>
         {
-            var actor = ActorMiddleware.Current(context);
-            if (actor is null)
-            {
-                return Results.Json(new { error = "Unauthenticated", message = "Sign in to continue." }, statusCode: StatusCodes.Status401Unauthorized);
-            }
-
-            if (actor.Role != UserRole.TeamLead)
-            {
-                return Results.Json(new { error = "Forbidden", message = "Manager dashboard access is restricted to the IT Manager." }, statusCode: StatusCodes.Status403Forbidden);
-            }
-
             var requested = Math.Clamp(count ?? 500, 1, 2000);
             var start = DateTime.UtcNow;
             var rows = Enumerable.Range(0, requested).Select((_, index) => new Ticket
@@ -144,19 +102,8 @@ public static class DashboardEndpoints
             return Results.Ok(new { message = $"Generated {requested} demo tickets.", count = requested, databaseSeedMilliseconds = Math.Round(elapsedMs, 2) });
         });
 
-        group.MapDelete("/demo/performance-data", async (HttpContext context, HelpdeskDbContext db, CancellationToken ct) =>
+        group.MapDelete("/demo/performance-data", async (HelpdeskDbContext db, CancellationToken ct) =>
         {
-            var actor = ActorMiddleware.Current(context);
-            if (actor is null)
-            {
-                return Results.Json(new { error = "Unauthenticated", message = "Sign in to continue." }, statusCode: StatusCodes.Status401Unauthorized);
-            }
-
-            if (actor.Role != UserRole.TeamLead)
-            {
-                return Results.Json(new { error = "Forbidden", message = "Manager dashboard access is restricted to the IT Manager." }, statusCode: StatusCodes.Status403Forbidden);
-            }
-
             var count = await db.Tickets.CountAsync(ct);
             if (count > 0)
             {

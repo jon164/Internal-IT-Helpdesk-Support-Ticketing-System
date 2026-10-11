@@ -90,6 +90,11 @@ jobs:
           expect_status 401 "/api/auth/me without a token is refused" "$base/api/auth/me"
           expect_status 401 "Naming an account in X-User-Id no longer grants access" -H "X-User-Id: it-manager" "$base/api/dashboard"
           expect_status 401 "A made-up bearer token is refused" -H "Authorization: Bearer forged" "$base/api/dashboard"
+          # Manager-only dashboard: every route in the group refuses an anonymous caller.
+          expect_status 401 "Dashboard tickets refuse an anonymous caller" "$base/api/dashboard/tickets"
+          expect_status 401 "Dashboard CSV export refuses an anonymous caller" "$base/api/dashboard/export"
+          expect_status 401 "Generating dashboard demo data refuses an anonymous caller" -X POST "$base/api/demo/performance-data"
+          expect_status 401 "Deleting dashboard demo data refuses an anonymous caller" -X DELETE "$base/api/demo/performance-data"
           expect_status 400 "Sign-in with blank credentials is rejected" -X POST -H "Content-Type: application/json" -d '{"username":"","password":""}' "$base/api/auth/login"
           expect_status 401 "Development demo password does not work outside Development" -X POST -H "Content-Type: application/json" -d '{"username":"it-manager","password":"Manager#Demo2026"}' "$base/api/auth/login"
 
