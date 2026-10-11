@@ -2,7 +2,7 @@ namespace Helpdesk.Core.Domain;
 
 public class TicketNote
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid Id { get; set; }
     public Guid TicketId { get; set; }
     public Ticket? Ticket { get; set; }
     public string AuthorId { get; set; } = string.Empty;

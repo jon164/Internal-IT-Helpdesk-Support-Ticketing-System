@@ -2,7 +2,7 @@ namespace Helpdesk.Core.Domain;
 
 public class TicketAuditEntry
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid Id { get; set; }
     public Guid TicketId { get; set; }
     public Ticket? Ticket { get; set; }
     public string ChangedBy { get; set; } = string.Empty;

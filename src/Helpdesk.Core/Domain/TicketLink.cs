@@ -2,7 +2,7 @@ namespace Helpdesk.Core.Domain;
 
 public class TicketLink
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid Id { get; set; }
     public Guid SourceTicketId { get; set; }
     public Ticket? SourceTicket { get; set; }
     public Guid TargetTicketId { get; set; }
