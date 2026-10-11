@@ -32,6 +32,23 @@ export function storeToken(token: string | null) {
   }
 }
 
+/**
+ * Demo accounts for local testing. The passwords must match
+ * src/Helpdesk.Api/appsettings.Development.json (a test checks this). They work only when the
+ * API runs in Development; Production has no passwords configured, so these grant nothing there.
+ */
+type DemoAccount = { username: string; password: string; role: string }
+
+// The literal sits behind import.meta.env.DEV, which Vite replaces with `false` in a production
+// build, so the passwords are removed from the production bundle entirely.
+export const DEMO_ACCOUNTS: readonly DemoAccount[] = import.meta.env.DEV
+  ? [
+      { username: 'airport-staff', password: 'Staff#Demo2026', role: 'Airport Staff' },
+      { username: 'it-technician', password: 'Tech#Demo2026', role: 'IT Technician' },
+      { username: 'it-manager', password: 'Manager#Demo2026', role: 'IT Manager' },
+    ]
+  : []
+
 export const DEMO_USERNAMES = ['airport-staff', 'it-technician', 'it-manager'] as const
 
 export function describeSignInError(error: unknown): string {

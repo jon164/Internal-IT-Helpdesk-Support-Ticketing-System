@@ -126,6 +126,11 @@ jobs:
       - name: Build client
         run: npm run build
 
+      - name: Check the production bundle contains no demo passwords
+        run: |
+          if grep -rl 'Demo2026' dist; then echo 'Demo passwords leaked into the production bundle' >&2; exit 1; fi
+          echo 'PASS: no demo passwords in dist/'
+
       - name: Lint client
         run: npm run lint
 

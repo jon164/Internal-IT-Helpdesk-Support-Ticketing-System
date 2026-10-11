@@ -480,6 +480,47 @@ button {
   margin: 8px 0 0;
 }
 
+.demo-accounts {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.demo-accounts li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+}
+
+.demo-accounts li:first-child {
+  border-top: 0;
+}
+
+.demo-account-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.demo-account-text strong {
+  color: var(--text);
+}
+
+.demo-accounts code {
+  user-select: all;
+}
+
+.demo-use {
+  min-height: 30px;
+  padding: 4px 12px;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

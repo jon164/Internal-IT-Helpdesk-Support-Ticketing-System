@@ -1,6 +1,6 @@
 import { useId, useRef, useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
-import { DEMO_USERNAMES, describeSignInError } from '../services/auth'
+import { DEMO_ACCOUNTS, DEMO_USERNAMES, describeSignInError } from '../services/auth'
 
 type FieldErrors = { username?: string; password?: string }
 
@@ -9,12 +9,18 @@ type Props = {
   onSignIn: (username: string, password: string) => Promise<void>
   /** Shown above the form, e.g. after signing out or when a session has expired. */
   statusMessage?: string | null
+  /**
+   * Show the demo passwords with a button that fills them in. Defaults to Vite development
+   * builds only: a production bundle never contains a list of working credentials.
+   */
+  showDemoPasswords?: boolean
 }
 
-export function LoginForm({ onSignIn, statusMessage }: Props) {
+export function LoginForm({ onSignIn, statusMessage, showDemoPasswords = DEMO_ACCOUNTS.length > 0 }: Props) {
   const id = useId()
   const usernameRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
+  const submitRef = useRef<HTMLButtonElement>(null)
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -57,6 +63,15 @@ export function LoginForm({ onSignIn, statusMessage }: Props) {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  /** Tester shortcut: fills both fields and moves focus to Sign in, so Enter signs in. */
+  function fillDemoAccount(account: (typeof DEMO_ACCOUNTS)[number]) {
+    setUsername(account.username)
+    setPassword(account.password)
+    setFieldErrors({})
+    setFormError(null)
+    submitRef.current?.focus()
   }
 
   function trackCapsLock(event: KeyboardEvent<HTMLInputElement>) {
@@ -130,19 +145,51 @@ export function LoginForm({ onSignIn, statusMessage }: Props) {
         {fieldErrors.password && <p id={passwordErrorId} className="field-error">{fieldErrors.password}</p>}
       </div>
 
-      <button type="submit" className="primary-button auth-button" disabled={submitting}>
+      <button ref={submitRef} type="submit" className="primary-button auth-button" disabled={submitting}>
         {submitting ? 'Signing in…' : 'Sign in'}
       </button>
 
-      <details className="auth-note">
+      <details className="auth-note" open={showDemoPasswords}>
         <summary>Demo accounts</summary>
-        <p>
-          Usernames: {DEMO_USERNAMES.map((name, index) => (
-            <span key={name}><code>{name}</code>{index < DEMO_USERNAMES.length - 1 ? ', ' : ''}</span>
-          ))}.
-          Development passwords are set in <code>appsettings.Development.json</code> and listed in the README.
-          After five wrong passwords an account is locked for 15 minutes.
-        </p>
+        {showDemoPasswords ? (
+          <>
+            <ul className="demo-accounts" aria-label="Demo accounts for local testing">
+              {DEMO_ACCOUNTS.map(account => (
+                <li key={account.username}>
+                  <div className="demo-account-text">
+                    <strong>{account.role}</strong>
+                    <span>
+                      <span className="visually-hidden">Username </span><code>{account.username}</code>
+                      <span aria-hidden="true"> / </span>
+                      <span className="visually-hidden">, password </span><code>{account.password}</code>
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="secondary-button demo-use"
+                    onClick={() => fillDemoAccount(account)}
+                    aria-label={`Use the ${account.role} demo account`}
+                    disabled={submitting}
+                  >
+                    Use
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <p>
+              These work only while the API runs in Development. After five wrong passwords an
+              account is locked for 15 minutes.
+            </p>
+          </>
+        ) : (
+          <p>
+            Usernames: {DEMO_USERNAMES.map((name, index) => (
+              <span key={name}><code>{name}</code>{index < DEMO_USERNAMES.length - 1 ? ', ' : ''}</span>
+            ))}.
+            Development passwords are set in <code>appsettings.Development.json</code>.
+            After five wrong passwords an account is locked for 15 minutes.
+          </p>
+        )}
       </details>
     </form>
   )
