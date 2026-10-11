@@ -1,0 +1,97 @@
+name: Quality Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend build, tests, and smoke check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build and run backend tests
+        run: dotnet test Helpdesk.slnx --configuration Release --logger "console;verbosity=normal"
+
+      - name: Start API and verify technician endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          log_file="$RUNNER_TEMP/helpdesk-api.log"
+          ASPNETCORE_URLS="http://127.0.0.1:5099" \
+            dotnet run --project src/Helpdesk.Api/Helpdesk.Api.csproj \
+              --configuration Release --no-build --no-launch-profile \
+              -- --urls http://127.0.0.1:5099 \
+              >"$log_file" 2>&1 &
+          api_pid=$!
+
+          cleanup() {
+            kill "$api_pid" 2>/dev/null || true
+            wait "$api_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error \
+              http://127.0.0.1:5099/api/technicians \
+              | jq -e 'type == "array"' >/dev/null; then
+              echo "API smoke check passed: /api/technicians returned a JSON array."
+              exit 0
+            fi
+
+            if ! kill -0 "$api_pid" 2>/dev/null; then
+              cat "$log_file"
+              echo "API process exited before the endpoint became ready." >&2
+              exit 1
+            fi
+
+            sleep 2
+          done
+
+          cat "$log_file"
+          echo "API did not become ready within 60 seconds." >&2
+          exit 1
+
+  client:
+    name: Client build and lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install client dependencies
+        run: npm ci
+
+      - name: Build client
+        run: npm run build
+
+      - name: Lint client
+        run: npm run lint
