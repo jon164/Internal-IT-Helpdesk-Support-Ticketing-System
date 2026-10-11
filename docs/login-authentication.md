@@ -44,8 +44,8 @@ Quality areas covered: **security** (primary), **usability**, **accessibility** 
 
 ### Execution status (11 Oct 2026)
 
-- **Client: 26 / 26 passing** (`npm test`), plus `npm run build` and `npm run lint` clean (0 errors; the 3 existing warnings are in files this change did not touch).
-- **Backend MSTest suite: written, not yet executed.** NuGet was unreachable from the build container, so `dotnet test` could not run there. `Helpdesk.Core` was compiled with warnings as errors and the hashing and session-expiry checks (AUTH-B01–B06, B16) were run in a package-free harness and passed. Run `dotnet test` and update this line before citing any AUTH-B result as passed.
+- **Client: 26 / 26 passing** (`npm test`, on a team Windows machine and in the build container), plus `npm run build` and `npm run lint` clean (0 errors; the 3 existing warnings are in files this change did not touch).
+- **Backend: 78 / 78 passing** (`dotnet test`, .NET SDK 10, Windows, 11 Oct 2026): the 31 sign-in tests above (54 runs, counting each data row) plus the existing 24 ticket tests. Build had only warnings: NU1903 on `SQLitePCLRaw.lib.e_sqlite3` (pre-existing, no patched version) and four MSTest style suggestions in the new tests.
 
 ### Where they live and how to run them
 
