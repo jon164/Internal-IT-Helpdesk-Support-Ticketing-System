@@ -1,4 +1,21 @@
 export type Role = 'Airport Staff' | 'IT Technician' | 'IT Manager'
+
+/** Role names as the API returns them (UserRole enum on the server). */
+export type ServerRole = 'Requester' | 'Technician' | 'TeamLead'
+
+export type SessionUser = {
+  id: string
+  displayName: string
+  department: string
+  role: ServerRole
+  isActive: boolean
+}
+
+export type LoginResponse = {
+  token: string
+  expiresAtUtc: string
+  user: SessionUser
+}
 export type TicketStatus = 'New' | 'InProgress' | 'WaitingOnUser' | 'Resolved' | 'Closed'
 export type TicketPriority = 'Low' | 'Medium' | 'High' | 'Critical'
 export type TicketSort = 'newest' | 'oldest' | 'priority-age'
