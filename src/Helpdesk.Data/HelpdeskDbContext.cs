@@ -10,6 +10,7 @@ public class HelpdeskDbContext : DbContext
     public DbSet<Ticket> Tickets => Set<Ticket>();
     public DbSet<Technician> Technicians => Set<Technician>();
     public DbSet<UserAccount> Users => Set<UserAccount>();
+    public DbSet<UserSession> UserSessions => Set<UserSession>();
     public DbSet<TicketNote> TicketNotes => Set<TicketNote>();
     public DbSet<TicketAuditEntry> TicketAuditEntries => Set<TicketAuditEntry>();
     public DbSet<TicketLink> TicketLinks => Set<TicketLink>();
@@ -25,6 +26,22 @@ public class HelpdeskDbContext : DbContext
             entity.Property(u => u.Department).HasMaxLength(120).IsRequired();
             entity.Property(u => u.Role).HasConversion<int>();
             entity.Property(u => u.IsActive).HasDefaultValue(true);
+            entity.Property(u => u.PasswordHash).HasMaxLength(256);
+            entity.Property(u => u.FailedLoginCount).HasDefaultValue(0);
+        });
+
+        modelBuilder.Entity<UserSession>(entity =>
+        {
+            entity.ToTable("UserSessions");
+            entity.HasKey(s => s.Id);
+            entity.Property(s => s.UserId).HasMaxLength(120).IsRequired();
+            entity.Property(s => s.TokenHash).HasMaxLength(64).IsRequired();
+            entity.HasIndex(s => s.TokenHash).IsUnique();
+
+            entity.HasOne(s => s.User)
+                .WithMany()
+                .HasForeignKey(s => s.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Ticket>(entity =>

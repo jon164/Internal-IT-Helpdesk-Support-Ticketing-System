@@ -9,25 +9,6 @@ using Microsoft.EntityFrameworkCore;
 
 public static class DashboardEndpoints
 {
-    public static void MapSessionEndpoints(this IEndpointRouteBuilder app)
-    {
-        app.MapPost("/api/session", async (SignInRequest request, HelpdeskDbContext db, CancellationToken ct) =>
-        {
-            if (string.IsNullOrWhiteSpace(request.UserId))
-            {
-                return Results.BadRequest(new { error = "Invalid", message = "Choose an account." });
-            }
-
-            var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == request.UserId, ct);
-            if (user is null || !user.IsActive)
-            {
-                return Results.Json(new { error = "Unauthenticated", message = "That account cannot sign in." }, statusCode: StatusCodes.Status401Unauthorized);
-            }
-
-            return Results.Ok(new UserDto(user.Id, user.DisplayName, user.Department, user.Role.ToString(), user.IsActive));
-        });
-    }
-
     public static void MapDashboardEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api");
@@ -37,7 +18,7 @@ public static class DashboardEndpoints
             var actor = ActorMiddleware.Current(context);
             if (actor is null)
             {
-                return Results.Json(new { error = "Unauthenticated", message = $"Supply a known user in the {ActorMiddleware.HeaderName} header." }, statusCode: StatusCodes.Status401Unauthorized);
+                return Results.Json(new { error = "Unauthenticated", message = "Sign in to continue." }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
             if (actor.Role != UserRole.TeamLead)
@@ -54,7 +35,7 @@ public static class DashboardEndpoints
             var actor = ActorMiddleware.Current(context);
             if (actor is null)
             {
-                return Results.Json(new { error = "Unauthenticated", message = $"Supply a known user in the {ActorMiddleware.HeaderName} header." }, statusCode: StatusCodes.Status401Unauthorized);
+                return Results.Json(new { error = "Unauthenticated", message = "Sign in to continue." }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
             if (actor.Role != UserRole.TeamLead)
@@ -92,7 +73,7 @@ public static class DashboardEndpoints
             var actor = ActorMiddleware.Current(context);
             if (actor is null)
             {
-                return Results.Json(new { error = "Unauthenticated", message = $"Supply a known user in the {ActorMiddleware.HeaderName} header." }, statusCode: StatusCodes.Status401Unauthorized);
+                return Results.Json(new { error = "Unauthenticated", message = "Sign in to continue." }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
             if (actor.Role != UserRole.TeamLead)
@@ -131,7 +112,7 @@ public static class DashboardEndpoints
             var actor = ActorMiddleware.Current(context);
             if (actor is null)
             {
-                return Results.Json(new { error = "Unauthenticated", message = $"Supply a known user in the {ActorMiddleware.HeaderName} header." }, statusCode: StatusCodes.Status401Unauthorized);
+                return Results.Json(new { error = "Unauthenticated", message = "Sign in to continue." }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
             if (actor.Role != UserRole.TeamLead)
@@ -168,7 +149,7 @@ public static class DashboardEndpoints
             var actor = ActorMiddleware.Current(context);
             if (actor is null)
             {
-                return Results.Json(new { error = "Unauthenticated", message = $"Supply a known user in the {ActorMiddleware.HeaderName} header." }, statusCode: StatusCodes.Status401Unauthorized);
+                return Results.Json(new { error = "Unauthenticated", message = "Sign in to continue." }, statusCode: StatusCodes.Status401Unauthorized);
             }
 
             if (actor.Role != UserRole.TeamLead)
