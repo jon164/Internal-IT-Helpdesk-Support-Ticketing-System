@@ -21,57 +21,29 @@ public static class DashboardEndpoints
             return Results.Ok(BuildMetrics(tickets));
         });
 
+        // USER STORY: filter tickets by status, priority and assignee (IT manager).
+        // The table and the CSV export share TicketFilter, so they always return the same tickets.
         group.MapGet("/dashboard/tickets", async (HelpdeskDbContext db, string? status, string? priority, string? assignee, CancellationToken ct) =>
         {
-            var tickets = await db.Tickets.Include(t => t.AssignedTechnician).ToListAsync(ct);
-            
-            // Apply filters
-            if (!string.IsNullOrEmpty(status) && status != "All")
+            if (!TicketFilter.TryParse(status, priority, assignee, out var filter, out var error))
             {
-                var statusEnum = FromUiStatus(status);
-                tickets = tickets.Where(t => t.Status == statusEnum).ToList();
+                return InvalidFilter(error);
             }
 
-            if (!string.IsNullOrEmpty(priority) && priority != "All")
-            {
-                if (Enum.TryParse<TicketPriority>(priority, out var priorityEnum))
-                {
-                    tickets = tickets.Where(t => t.Priority == priorityEnum).ToList();
-                }
-            }
+            var tickets = await FilteredTicketsAsync(db, filter, ct);
 
-            if (!string.IsNullOrEmpty(assignee) && assignee != "All")
-            {
-                tickets = tickets.Where(t => t.AssignedTechnician?.Name == assignee).ToList();
-            }
-
+            // No match is a normal answer: 200 with an empty list, never an error.
             return Results.Ok(tickets.Select(MapTicketRow).ToList());
         });
 
         group.MapGet("/dashboard/export", async (HelpdeskDbContext db, string? status, string? priority, string? assignee, CancellationToken ct) =>
         {
-            var tickets = await db.Tickets.Include(t => t.AssignedTechnician).ToListAsync(ct);
-            
-            // Apply filters
-            if (!string.IsNullOrEmpty(status) && status != "All")
+            if (!TicketFilter.TryParse(status, priority, assignee, out var filter, out var error))
             {
-                var statusEnum = FromUiStatus(status);
-                tickets = tickets.Where(t => t.Status == statusEnum).ToList();
+                return InvalidFilter(error);
             }
 
-            if (!string.IsNullOrEmpty(priority) && priority != "All")
-            {
-                if (Enum.TryParse<TicketPriority>(priority, out var priorityEnum))
-                {
-                    tickets = tickets.Where(t => t.Priority == priorityEnum).ToList();
-                }
-            }
-
-            if (!string.IsNullOrEmpty(assignee) && assignee != "All")
-            {
-                tickets = tickets.Where(t => t.AssignedTechnician?.Name == assignee).ToList();
-            }
-
+            var tickets = await FilteredTicketsAsync(db, filter, ct);
             var csv = BuildCsv(tickets);
             return Results.File(Encoding.UTF8.GetBytes(csv), "text/csv; charset=utf-8", "airport-helpdesk-dashboard.csv");
         });
@@ -114,6 +86,17 @@ public static class DashboardEndpoints
             return Results.Ok(new { message = $"Removed {count} demo ticket(s)." });
         });
     }
+
+    /// <summary>The filter runs in the database query, so only matching tickets are loaded.</summary>
+    private static Task<List<Ticket>> FilteredTicketsAsync(HelpdeskDbContext db, TicketFilter filter, CancellationToken ct) =>
+        filter.Apply(db.Tickets.Include(t => t.AssignedTechnician).AsNoTracking())
+            .OrderByDescending(t => t.CreatedAt)
+            .ToListAsync(ct);
+
+    private static IResult InvalidFilter(string? message) =>
+        Results.Json(
+            new { error = "InvalidFilter", message = message ?? "The filter values are not valid." },
+            statusCode: StatusCodes.Status400BadRequest);
 
     private static object BuildMetrics(List<Ticket> tickets)
     {
@@ -174,12 +157,6 @@ public static class DashboardEndpoints
     {
         TicketStatus.PendingEmployeeResponse => "WaitingOnUser",
         _ => status.ToString(),
-    };
-
-    private static TicketStatus FromUiStatus(string uiStatus) => uiStatus switch
-    {
-        "WaitingOnUser" => TicketStatus.PendingEmployeeResponse,
-        _ => Enum.TryParse<TicketStatus>(uiStatus, out var parsed) ? parsed : TicketStatus.New,
     };
 
     private static string ToUiPriority(TicketPriority priority) => priority.ToString();

@@ -12,16 +12,40 @@ import { PRIORITY_OPTIONS, STATUS_DISPLAY, STATUS_OPTIONS } from '../utils'
  */
 type Access = 'checking' | 'allowed' | 'denied'
 
+const NO_FILTERS: DashboardFilters = { status: 'All', priority: 'All', assignee: 'All' }
+
 export function DashboardPage({ role, setNotice }: { role: Role; setNotice: (notice: Notice) => void }) {
   const [access, setAccess] = useState<Access>('checking')
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [performanceMessage, setPerformanceMessage] = useState('')
-  const [filters, setFilters] = useState<DashboardFilters>({ status: 'All', priority: 'All', assignee: 'All' })
-  const assignees = useMemo(() => Array.from(new Set(tickets.map(x => x.assignee))).sort(), [tickets])
+  const [filters, setFilters] = useState<DashboardFilters>(NO_FILTERS)
+  const [technicianNames, setTechnicianNames] = useState<string[]>([])
+  /*
+   * USER STORY: filter by status, priority and assignee.
+   * The assignee list comes from the technician roster, not from the tickets on screen. Built from
+   * the results, it shrank as soon as another filter was applied, and a technician with no tickets
+   * (the person most worth seeing when checking workload) could never be picked.
+   */
+  const assignees = useMemo(() => {
+    const names = new Set([...technicianNames, ...tickets.map(x => x.assignee)])
+    names.delete('Unassigned')
+    if (filters.assignee !== 'All') names.add(filters.assignee)
+    return [...Array.from(names).filter(n => n !== 'Unassigned').sort(), 'Unassigned']
+  }, [technicianNames, tickets, filters.assignee])
+  const filtering = filters.status !== 'All' || filters.priority !== 'All' || filters.assignee !== 'All'
   const deniedHeading = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => { void load() }, [role, filters.status, filters.priority, filters.assignee])
+
+  useEffect(() => {
+    // Only fetched once the server has allowed the dashboard. The roster just fills the Assignee
+    // list; if it fails, names from the results still work.
+    if (access !== 'allowed') return
+    api.getTechnicians()
+      .then(list => setTechnicianNames(list.map(t => t.name)))
+      .catch(() => setTechnicianNames([]))
+  }, [access])
 
   useEffect(() => {
     // Move focus to the message so keyboard and screen-reader users learn why nothing appeared.
@@ -86,8 +110,10 @@ export function DashboardPage({ role, setNotice }: { role: Role; setNotice: (not
     <section className="panel"><div className="panel-header dashboard-header"><div><p className="eyebrow">FILTERS</p><h3>Investigate ticket workload</h3></div><div className="performance-actions"><button className="secondary-button" onClick={runPerformance}>Run 500-ticket test</button><button className="text-button" onClick={clearPerformance}>Remove test data</button></div></div>
     {performanceMessage && <div className="performance-message">{performanceMessage}</div>}
     <div className="filter-grid"><label><span>Status</span><select value={filters.status} onChange={e => setFilters(f => ({...f,status:e.target.value}))}><option>All</option>{STATUS_OPTIONS.map(s => <option key={s} value={s}>{STATUS_DISPLAY[s]}</option>)}</select></label><label><span>Priority</span><select value={filters.priority} onChange={e => setFilters(f => ({...f,priority:e.target.value}))}><option>All</option>{PRIORITY_OPTIONS.map(p => <option key={p}>{p}</option>)}</select></label><label><span>Assignee</span><select value={filters.assignee} onChange={e => setFilters(f => ({...f,assignee:e.target.value}))}><option>All</option>{assignees.map(a => <option key={a}>{a}</option>)}</select></label></div>
-    <div className="results-line"><strong>{tickets.length} result(s)</strong><span>Filters also apply to CSV export.</span></div>
-    <div className="table-wrap"><table><thead><tr><th>Ticket</th><th>Location</th><th>System</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Passenger</th><th>SLA</th></tr></thead><tbody>{tickets.map(t => <tr key={t.id}><td>#{t.id}</td><td>{t.terminal} / {t.area}</td><td>{t.systemType}</td><td>{t.priority}</td><td>{STATUS_DISPLAY[t.status]}</td><td>{t.assignee}</td><td>{t.passengerImpact ? 'Yes' : 'No'}</td><td>{t.slaOverdue ? <span className="table-overdue">Overdue</span> : 'Within SLA'}</td></tr>)}</tbody></table>{tickets.length === 0 && <div className="empty-state"><strong>No tickets match these filters.</strong><p>The empty result is handled without an error.</p></div>}</div>
+    <div className="results-line"><strong role="status" aria-live="polite">{tickets.length} {tickets.length === 1 ? 'result' : 'results'}</strong><span>Filters also apply to CSV export.</span>{filtering && <button type="button" className="text-button" onClick={() => setFilters(NO_FILTERS)}>Clear filters</button>}</div>
+    <div className="table-wrap"><table><thead><tr><th>Ticket</th><th>Location</th><th>System</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Passenger</th><th>SLA</th></tr></thead><tbody>{tickets.map(t => <tr key={t.id}><td>#{t.id}</td><td>{t.terminal} / {t.area}</td><td>{t.systemType}</td><td>{t.priority}</td><td>{STATUS_DISPLAY[t.status]}</td><td>{t.assignee}</td><td>{t.passengerImpact ? 'Yes' : 'No'}</td><td>{t.slaOverdue ? <span className="table-overdue">Overdue</span> : 'Within SLA'}</td></tr>)}</tbody></table>{tickets.length === 0 && <div className="empty-state">{filtering
+      ? <><strong>No tickets match these filters.</strong><p>Try a different status, priority or assignee, or clear the filters to see every ticket.</p></>
+      : <><strong>There are no tickets yet.</strong><p>New tickets will appear here.</p></>}</div>}</div>
     </section>
   </>
 }
