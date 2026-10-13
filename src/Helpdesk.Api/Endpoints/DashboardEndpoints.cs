@@ -15,15 +15,15 @@ public static class DashboardEndpoints
         // not in each handler, so a route added here later cannot forget it.
         var group = app.MapGroup("/api").AddEndpointFilter<RequireManagerFilter>();
 
-        group.MapGet("/dashboard", async (HelpdeskDbContext db, CancellationToken ct) =>
+        group.MapGet("/dashboard", async (HelpdeskDbContext db, TimeProvider clock, CancellationToken ct) =>
         {
             var tickets = await db.Tickets.Include(t => t.AssignedTechnician).ToListAsync(ct);
-            return Results.Ok(BuildMetrics(tickets));
+            return Results.Ok(BuildMetrics(tickets, clock.GetUtcNow().UtcDateTime));
         });
 
         // USER STORY: filter tickets by status, priority and assignee (IT manager).
         // The table and the CSV export share TicketFilter, so they always return the same tickets.
-        group.MapGet("/dashboard/tickets", async (HelpdeskDbContext db, string? status, string? priority, string? assignee, CancellationToken ct) =>
+        group.MapGet("/dashboard/tickets", async (HelpdeskDbContext db, TimeProvider clock, string? status, string? priority, string? assignee, CancellationToken ct) =>
         {
             if (!TicketFilter.TryParse(status, priority, assignee, out var filter, out var error))
             {
@@ -33,10 +33,11 @@ public static class DashboardEndpoints
             var tickets = await FilteredTicketsAsync(db, filter, ct);
 
             // No match is a normal answer: 200 with an empty list, never an error.
-            return Results.Ok(tickets.Select(MapTicketRow).ToList());
+            var now = clock.GetUtcNow().UtcDateTime;
+            return Results.Ok(tickets.Select(t => MapTicketRow(t, now)).ToList());
         });
 
-        group.MapGet("/dashboard/export", async (HelpdeskDbContext db, string? status, string? priority, string? assignee, CancellationToken ct) =>
+        group.MapGet("/dashboard/export", async (HelpdeskDbContext db, TimeProvider clock, string? status, string? priority, string? assignee, CancellationToken ct) =>
         {
             if (!TicketFilter.TryParse(status, priority, assignee, out var filter, out var error))
             {
@@ -44,7 +45,7 @@ public static class DashboardEndpoints
             }
 
             var tickets = await FilteredTicketsAsync(db, filter, ct);
-            var csv = BuildCsv(tickets);
+            var csv = BuildCsv(tickets, clock.GetUtcNow().UtcDateTime);
             return Results.File(Encoding.UTF8.GetBytes(csv), "text/csv; charset=utf-8", "airport-helpdesk-dashboard.csv");
         });
 
@@ -98,10 +99,11 @@ public static class DashboardEndpoints
             new { error = "InvalidFilter", message = message ?? "The filter values are not valid." },
             statusCode: StatusCodes.Status400BadRequest);
 
-    private static object BuildMetrics(List<Ticket> tickets)
+    private static object BuildMetrics(List<Ticket> tickets, DateTime nowUtc)
     {
         var openBacklog = tickets.Count(t => t.Status != TicketStatus.Closed && t.Status != TicketStatus.Resolved);
-        var overdue = tickets.Count(t => t.Status != TicketStatus.Closed && t.Status != TicketStatus.Resolved && t.Priority == TicketPriority.Critical);
+        // USER STORY: SLA breach flagging. Overdue = open longer than the priority's SLA window (SlaPolicy).
+        var overdue = tickets.Count(t => SlaPolicy.IsOverdue(t, nowUtc));
         var resolved = tickets.Where(t => t.ResolvedAt is not null).ToList();
         var avgMinutes = resolved.Count == 0 ? 0 : resolved.Average(t => (t.ResolvedAt!.Value - t.CreatedAt).TotalMinutes);
 
@@ -125,7 +127,7 @@ public static class DashboardEndpoints
         };
     }
 
-    private static object MapTicketRow(Ticket ticket) => new
+    private static object MapTicketRow(Ticket ticket, DateTime nowUtc) => new
     {
         id = Math.Abs(ticket.Id.GetHashCode()),
         terminal = ticket.AssignedTechnicianId is null ? "T-01" : "T-03",
@@ -149,7 +151,7 @@ public static class DashboardEndpoints
         attachmentOriginalName = (string?)null,
         attachmentContentType = (string?)null,
         attachmentSize = (long?)null,
-        slaOverdue = ticket.Priority == TicketPriority.Critical && ticket.Status != TicketStatus.Closed && ticket.Status != TicketStatus.Resolved,
+        slaOverdue = SlaPolicy.IsOverdue(ticket, nowUtc),
         isPerformanceTest = false,
     };
 
@@ -161,7 +163,7 @@ public static class DashboardEndpoints
 
     private static string ToUiPriority(TicketPriority priority) => priority.ToString();
 
-    private static string BuildCsv(List<Ticket> tickets)
+    private static string BuildCsv(List<Ticket> tickets, DateTime nowUtc)
     {
         var lines = new List<string>
         {
@@ -180,7 +182,7 @@ public static class DashboardEndpoints
                 ticket.Status.ToString(),
                 ticket.AssignedTechnician?.Name ?? "Unassigned",
                 ticket.SubmitterName,
-                (ticket.Priority == TicketPriority.Critical && ticket.Status != TicketStatus.Closed && ticket.Status != TicketStatus.Resolved).ToString(),
+                SlaPolicy.IsOverdue(ticket, nowUtc).ToString(),
             ]));
         }
 

@@ -127,7 +127,10 @@ public sealed class DashboardEndpointAccessTests
                 new UserAccount { Id = "it-technician", DisplayName = "IT Technician", Department = "IT Services", Role = UserRole.Technician, PasswordHash = hasher.Hash(TechPassword) },
                 new UserAccount { Id = "it-manager", DisplayName = "IT Manager", Department = "IT Services", Role = UserRole.TeamLead, PasswordHash = hasher.Hash(ManagerPassword) });
             db.Tickets.AddRange(
-                new Ticket { Title = "Gate 4 kiosk offline", Description = "Kiosk frozen", SubmitterName = "Sam", SubmitterEmail = "sam@airport.test", Priority = TicketPriority.Critical },
+                new Ticket { Title = "Gate 4 kiosk offline", Description = "Kiosk frozen", SubmitterName = "Sam", SubmitterEmail = "sam@airport.test", Priority = TicketPriority.Critical,
+                    // 5 hours old: past the 4-hour Critical SLA, so DASH-B09 still expects overdueCount 1.
+                    // (It used to be created "now" and still counted, which was the SLA bug.)
+                    CreatedAt = DateTime.UtcNow.AddHours(-5) },
                 new Ticket { Title = "Printer jam", Description = "Check-in printer", SubmitterName = "Ana", SubmitterEmail = "ana@airport.test", Status = TicketStatus.Resolved, ResolvedAt = DateTime.UtcNow });
             await db.SaveChangesAsync();
         }

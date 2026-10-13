@@ -427,7 +427,7 @@ public static class TicketEndpoints
         attachmentOriginalName = (string?)null,
         attachmentContentType = (string?)null,
         attachmentSize = (long?)null,
-        slaOverdue = ticket.Priority == TicketPriority.Critical && ticket.Status != TicketStatus.Closed && ticket.Status != TicketStatus.Resolved,
+        slaOverdue = SlaPolicy.IsOverdue(ticket, DateTime.UtcNow), // same rule as the dashboard
         isPerformanceTest = false,
     };
 
