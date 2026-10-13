@@ -5,14 +5,17 @@ import { DashboardPage } from './pages/DashboardPage'
 import { FlightLookupPage } from './pages/FlightLookupPage'
 import { TicketsPage } from './pages/TicketsPage'
 import { TicketNotifications } from './components/TicketNotifications'
-import { api } from './services/api'
-import type { Notice, Role, TicketNotification } from './types'
+import { LoginForm } from './components/LoginForm'
+import { api, onUnauthorized, setSessionToken } from './services/api'
+import { readStoredToken, storeToken, toClientRole } from './services/auth'
+import type { Notice, Role, SessionUser, TicketNotification } from './types'
 
 type Page = 'tickets' | 'flight' | 'dashboard'
 
 const THEME_KEY = 'airport-helpdesk-theme'
-const SESSION_KEY = 'airport-helpdesk-auth'
-const ROLE_KEY = 'airport-helpdesk-role'
+// Keys from the earlier identity-only sign-in. They are cleared on load because a role kept
+// in localStorage is something the user can edit; the role now comes only from the server.
+const LEGACY_KEYS = ['airport-helpdesk-auth', 'airport-helpdesk-role']
 const NOTIFICATIONS_KEY = 'airport-helpdesk-notifications'
 const NOTIFICATION_SNAPSHOT_KEY = 'airport-helpdesk-notification-snapshot'
 const NOTIFICATION_NOTES_KEY = 'airport-helpdesk-notification-notes'
@@ -35,20 +38,23 @@ const PAGE_LABELS: Record<Page, string> = {
   dashboard: 'Manager dashboard',
 }
 
-const ROLE_OPTIONS: Role[] = ['Airport Staff', 'IT Technician', 'IT Manager']
+type AuthStatus = 'checking' | 'signed-out' | 'signed-in'
+
+const PROFILE_INITIALS: Record<Role, string> = {
+  'Airport Staff': 'AS',
+  'IT Technician': 'IT',
+  'IT Manager': 'IM',
+}
 
 export default function App() {
-  const [role, setRole] = useState<Role>(() => {
-    const savedRole = localStorage.getItem(ROLE_KEY)
-    return (savedRole as Role | null) ?? 'Airport Staff'
-  })
+  const [initialToken] = useState(readStoredToken)
+  const [authStatus, setAuthStatus] = useState<AuthStatus>(() => (initialToken ? 'checking' : 'signed-out'))
+  const [user, setUser] = useState<SessionUser | null>(null)
+  const role: Role = user ? toClientRole(user.role) : 'Airport Staff'
+  const isSignedIn = authStatus === 'signed-in'
   const [page, setPage] = useState<Page>('tickets')
   const [focusTicketId, setFocusTicketId] = useState<number | null>(null)
   const [ticketNotifications, setTicketNotifications] = useState<TicketNotification[]>(readStoredNotifications)
-  const [isSignedIn, setIsSignedIn] = useState(() => {
-    const saved = localStorage.getItem(SESSION_KEY)
-    return saved !== 'signed-out'
-  })
 
   // USER STORY: Light / Dark Mode
   // The selected theme is saved so it stays after refreshing.
@@ -70,13 +76,48 @@ export default function App() {
     )
   }, [dark])
 
+  // Restore a session after a page refresh by asking the server who the stored token belongs to.
   useEffect(() => {
-    localStorage.setItem(ROLE_KEY, role)
-  }, [role])
+    try {
+      LEGACY_KEYS.forEach(key => localStorage.removeItem(key))
+    } catch {
+      // Storage unavailable; nothing to clear.
+    }
 
+    if (!initialToken) return
+    let active = true
+    setSessionToken(initialToken)
+
+    api.me()
+      .then(current => {
+        if (!active) return
+        setUser(current)
+        setAuthStatus('signed-in')
+        if (toClientRole(current.role) === 'IT Manager') setPage('dashboard')
+      })
+      .catch(() => {
+        if (!active) return
+        setSessionToken(null)
+        storeToken(null)
+        setAuthStatus('signed-out')
+        setNotice({ type: 'info', text: 'Your session has ended. Please sign in again.' })
+      })
+
+    return () => { active = false }
+  }, [initialToken])
+
+  // Any request that comes back 401 mid-session means the token expired or was revoked.
   useEffect(() => {
-    localStorage.setItem(SESSION_KEY, isSignedIn ? 'signed-in' : 'signed-out')
-  }, [isSignedIn])
+    onUnauthorized(() => {
+      setSessionToken(null)
+      storeToken(null)
+      setUser(null)
+      setAuthStatus('signed-out')
+      setPage('tickets')
+      setNotice({ type: 'info', text: 'Your session has ended. Please sign in again.' })
+    })
+    return () => onUnauthorized(null)
+  }, [])
 
   useEffect(() => {
     if (!isSignedIn || role !== 'Airport Staff') return
@@ -200,45 +241,30 @@ export default function App() {
     setNotice(null)
   }
 
-  async function signIn(next: Role) {
-    try {
-      await api.signIn(next)
-      setRole(next)
-      setNotice(null)
-      setIsSignedIn(true)
-
-      if (next === 'IT Manager') {
-        setPage('dashboard')
-      } else if (page === 'dashboard') {
-        setPage('tickets')
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Sign in failed.'
-      setNotice({ type: 'error', text: message })
-    }
-  }
-
-  function signOut() {
-    setIsSignedIn(false)
-    setRole('Airport Staff')
-    setPage('tickets')
-    setNotice({ type: 'info', text: 'Signed out. Choose a demo account to continue.' })
-  }
-
-  function changeRole(next: Role) {
-    if (!isSignedIn) {
-      signIn(next)
-      return
-    }
-
-    setRole(next)
+  async function signIn(username: string, password: string) {
+    // Errors propagate to the login form, which shows them next to the fields.
+    const result = await api.login(username, password)
+    setSessionToken(result.token)
+    storeToken(result.token)
+    setUser(result.user)
+    setAuthStatus('signed-in')
     setNotice(null)
+    setFocusTicketId(null)
+    setPage(toClientRole(result.user.role) === 'IT Manager' ? 'dashboard' : 'tickets')
+  }
 
-    if (next === 'IT Manager') {
-      setPage('dashboard')
-    } else if (page === 'dashboard') {
-      setPage('tickets')
+  async function signOut() {
+    try {
+      await api.logout()
+    } catch {
+      // Clear local state even if the server is unreachable; the token expires on its own.
     }
+    setSessionToken(null)
+    storeToken(null)
+    setUser(null)
+    setAuthStatus('signed-out')
+    setPage('tickets')
+    setNotice({ type: 'info', text: 'You have signed out.' })
   }
 
   function goTo(next: Page) {
@@ -250,13 +276,23 @@ export default function App() {
     setNotice(null)
   }
 
-  if (!isSignedIn) {
+  if (authStatus === 'checking') {
     return (
       <div className={dark ? 'app dark' : 'app light'}>
         <div className="auth-shell">
+          <div className="auth-card" role="status">Checking your session…</div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isSignedIn || !user) {
+    return (
+      <div className={dark ? 'app dark' : 'app light'}>
+        <main className="auth-shell">
           <div className="auth-card">
             <div className="auth-brand">
-              <div className="brand-mark">IT</div>
+              <div className="brand-mark" aria-hidden="true">IT</div>
 
               <div>
                 <strong>HelpDesk</strong>
@@ -264,36 +300,9 @@ export default function App() {
               </div>
             </div>
 
-            <h1>Sign in</h1>
-            <p className="auth-subtitle">
-              Use the demo identity to access the ticket workflow and manager analytics.
-            </p>
-
-            <label className="auth-field">
-              <span>Demo account</span>
-              <select
-                value={role}
-                onChange={event => setRole(event.target.value as Role)}
-              >
-                {ROLE_OPTIONS.map(option => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-            </label>
-
-            <button
-              type="button"
-              className="primary-button auth-button"
-              onClick={() => void signIn(role)}
-            >
-              Sign in
-            </button>
-
-            <div className="auth-note">
-              This is a demo sign-in flow for the support workspace; the backend still enforces role-based access on requests.
-            </div>
+            <LoginForm onSignIn={signIn} statusMessage={notice?.text} />
           </div>
-        </div>
+        </main>
       </div>
     )
   }
@@ -381,17 +390,13 @@ export default function App() {
         </div>
 
         <div className="sidebar-profile">
-          <div className="profile-avatar">
-            {role === 'Airport Staff'
-              ? 'AS'
-              : role === 'IT Technician'
-                ? 'IT'
-                : 'IM'}
+          <div className="profile-avatar" aria-hidden="true">
+            {PROFILE_INITIALS[role]}
           </div>
 
           <div>
-            <strong>{role}</strong>
-            <span>Demo workspace</span>
+            <strong>{user.displayName}</strong>
+            <span>{role} · {user.id}</span>
           </div>
         </div>
       </aside>
@@ -412,24 +417,7 @@ export default function App() {
               />
             )}
 
-            <label className="role-switcher">
-              <span>Demo role</span>
-
-              <select
-                value={role}
-                onChange={event =>
-                  changeRole(
-                    event.target.value as Role,
-                  )
-                }
-              >
-                {ROLE_OPTIONS.map(option => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-            </label>
-
-            <button type="button" className="secondary-button signout-btn" onClick={signOut}>
+            <button type="button" className="secondary-button signout-btn" onClick={() => void signOut()}>
               Sign out
             </button>
 

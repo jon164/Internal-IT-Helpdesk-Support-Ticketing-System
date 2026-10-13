@@ -1,11 +1,22 @@
 using Helpdesk.Core.Domain;
+using Helpdesk.Core.Security;
 using Microsoft.EntityFrameworkCore;
 
 namespace Helpdesk.Data.Seeding;
 
 public static class DbSeeder
 {
-    public static async Task EnsureDemoUsersAsync(HelpdeskDbContext context, CancellationToken ct = default)
+    /// <summary>
+    /// Ensures the three demo accounts exist. A password is set only for accounts named in
+    /// <paramref name="demoPasswords"/> (read from configuration) that do not already have one.
+    /// An account left without a password cannot sign in, which is the safe default for any
+    /// environment where no demo passwords are configured.
+    /// </summary>
+    public static async Task EnsureDemoUsersAsync(
+        HelpdeskDbContext context,
+        IReadOnlyDictionary<string, string>? demoPasswords = null,
+        PasswordHasher? hasher = null,
+        CancellationToken ct = default)
     {
         var seeded = new[]
         {
@@ -14,10 +25,22 @@ public static class DbSeeder
             new UserAccount { Id = "it-manager", DisplayName = "IT Manager", Department = "IT Services", Role = UserRole.TeamLead, IsActive = true },
         };
 
+        hasher ??= new PasswordHasher();
+
         foreach (var account in seeded)
         {
-            var exists = await context.Users.AnyAsync(u => u.Id == account.Id, ct);
-            if (!exists)
+            var existing = await context.Users.FirstOrDefaultAsync(u => u.Id == account.Id, ct);
+            var target = existing ?? account;
+
+            if (string.IsNullOrEmpty(target.PasswordHash)
+                && demoPasswords is not null
+                && demoPasswords.TryGetValue(account.Id, out var password)
+                && !string.IsNullOrWhiteSpace(password))
+            {
+                target.PasswordHash = hasher.Hash(password);
+            }
+
+            if (existing is null)
             {
                 await context.Users.AddAsync(account, ct);
             }

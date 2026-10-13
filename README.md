@@ -112,6 +112,31 @@ Runs on **http://localhost:5173**. Open that in your browser.
 
 Stop either server with `Ctrl+C`.
 
+### Signing in
+
+The sign-in page checks a username and password against the API. Passwords are
+stored only as salted PBKDF2 hashes, and the API issues a session token that
+expires after 8 hours or on **Sign out**. Five wrong passwords in a row lock an
+account for 15 minutes.
+
+When the API runs in **Development** (the default `dotnet run` profile), these
+demo accounts get passwords from `src/Helpdesk.Api/appsettings.Development.json`:
+
+| Username | Password | Role |
+|---|---|---|
+| `airport-staff` | `Staff#Demo2026` | Airport Staff (requester) |
+| `it-technician` | `Tech#Demo2026` | IT Technician |
+| `it-manager` | `Manager#Demo2026` | IT Manager (dashboard access) |
+
+Outside Development no passwords are configured, so no account can sign in.
+To switch role, sign out and sign in as a different account — the role is read
+from the account on the server, never chosen in the browser.
+
+> First run after pulling this change: the API detects that your existing
+> `helpdesk.db` predates the password columns and rebuilds it, so tickets you
+> created locally are lost. Design and test notes are in
+> `docs/login-authentication.md`.
+
 ---
 
 ## 5. Running the tests
@@ -132,8 +157,9 @@ cd client
 npm run test
 ```
 
-Runs component and validation tests. Add `-- --watch` to re-run on save while
-developing.
+Runs component, API-client and sign-in journey tests, including automated
+WCAG 2.1 A/AA checks with axe-core. Use `npm run test:watch` to re-run on save
+while developing.
 
 ---
 

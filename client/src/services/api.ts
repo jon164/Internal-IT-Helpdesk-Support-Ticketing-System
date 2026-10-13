@@ -3,7 +3,9 @@ import type {
   DashboardFilters,
   DashboardMetrics,
   FlightRecord,
+  LoginResponse,
   Role,
+  SessionUser,
   StaffProfile,
   Technician,
   Ticket,
@@ -14,10 +16,25 @@ import type {
 
 const API_BASE = import.meta.env.VITE_API_URL ?? ''
 
-const DEMO_USER_IDS: Record<Role, string> = {
-  'Airport Staff': 'airport-staff',
-  'IT Technician': 'it-technician',
-  'IT Manager': 'it-manager',
+/**
+ * Session token issued by POST /api/auth/login. Held in memory for requests and mirrored to
+ * sessionStorage (by the App) so a page refresh keeps the user signed in, while closing the
+ * tab signs them out. The server stores only a hash of it.
+ */
+let sessionToken: string | null = null
+let unauthorizedHandler: (() => void) | null = null
+
+export function setSessionToken(token: string | null) {
+  sessionToken = token
+}
+
+export function getSessionToken() {
+  return sessionToken
+}
+
+/** Called when an authenticated request comes back 401, i.e. the session expired or was revoked. */
+export function onUnauthorized(handler: (() => void) | null) {
+  unauthorizedHandler = handler
 }
 
 export class ApiError extends Error {
@@ -31,8 +48,8 @@ export class ApiError extends Error {
   }
 }
 
-function resolveUserId(role?: Role) {
-  return role ? DEMO_USER_IDS[role] : undefined
+function authHeaders(): Record<string, string> {
+  return sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}
 }
 
 async function request<T>(path: string, options: RequestInit = {}, role?: Role): Promise<T> {
@@ -40,24 +57,26 @@ async function request<T>(path: string, options: RequestInit = {}, role?: Role):
   if (!(options.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
-  const userId = resolveUserId(role)
-  if (userId) headers.set('X-User-Id', userId)
+  // Identity comes only from the session token. The role argument is never sent; the server
+  // reads the role from the signed-in account. It is kept in the log for diagnostics.
+  for (const [name, value] of Object.entries(authHeaders())) headers.set(name, value)
 
   const url = `${API_BASE}${path}`
-  console.log(`[API] ${options.method || 'GET'} ${url}`, { userId, body: options.body })
-  
+  // Request bodies are deliberately not logged: the sign-in body contains a password.
+  console.debug(`[API] ${options.method || 'GET'} ${url}`, { role })
+
   const response = await fetch(url, { ...options, headers })
-  
+
   if (!response.ok) {
     let body: { message?: string; validNextStatuses?: string[] } | undefined
     try { body = await response.json() } catch { body = undefined }
-    console.error(`[API] ${response.status} error`, body)
+    if (response.status === 401 && sessionToken && !path.startsWith('/api/auth/')) {
+      unauthorizedHandler?.()
+    }
     throw new ApiError(body?.message ?? `Request failed (${response.status}).`, response.status, body)
   }
   if (response.status === 204) return undefined as T
-  const result = await response.json() as T
-  console.log(`[API] Response:`, result)
-  return result
+  return await response.json() as T
 }
 
 function qs(values: Record<string, string | number | boolean | undefined>) {
@@ -69,12 +88,18 @@ function qs(values: Record<string, string | number | boolean | undefined>) {
 }
 
 export const api = {
-  signIn(role: Role) {
-    const userId = resolveUserId(role)
-    return request<{ id: string; displayName: string; department: string; role: string; isActive: boolean }>(
-      '/api/session',
-      { method: 'POST', body: JSON.stringify({ userId }) },
-    )
+  login(username: string, password: string) {
+    return request<LoginResponse>('/api/auth/login', {
+      method: 'POST', body: JSON.stringify({ username, password }),
+    })
+  },
+
+  me() {
+    return request<SessionUser>('/api/auth/me')
+  },
+
+  logout() {
+    return request<void>('/api/auth/logout', { method: 'POST' })
   },
 
   getTickets(sort: TicketSort) {
@@ -156,8 +181,9 @@ export const api = {
   },
 
   async exportDashboard(filters: DashboardFilters, role: Role) {
+    console.debug('[API] GET /api/dashboard/export', { role })
     const response = await fetch(`${API_BASE}/api/dashboard/export${qs(filters)}`, {
-      headers: { 'X-User-Id': resolveUserId(role)! },
+      headers: authHeaders(),
     })
     if (!response.ok) {
       const body = await response.json().catch(() => ({})) as { message?: string }

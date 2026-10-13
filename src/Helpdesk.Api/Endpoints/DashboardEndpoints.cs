@@ -9,136 +9,48 @@ using Microsoft.EntityFrameworkCore;
 
 public static class DashboardEndpoints
 {
-    public static void MapSessionEndpoints(this IEndpointRouteBuilder app)
-    {
-        app.MapPost("/api/session", async (SignInRequest request, HelpdeskDbContext db, CancellationToken ct) =>
-        {
-            if (string.IsNullOrWhiteSpace(request.UserId))
-            {
-                return Results.BadRequest(new { error = "Invalid", message = "Choose an account." });
-            }
-
-            var user = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == request.UserId, ct);
-            if (user is null || !user.IsActive)
-            {
-                return Results.Json(new { error = "Unauthenticated", message = "That account cannot sign in." }, statusCode: StatusCodes.Status401Unauthorized);
-            }
-
-            return Results.Ok(new UserDto(user.Id, user.DisplayName, user.Department, user.Role.ToString(), user.IsActive));
-        });
-    }
-
     public static void MapDashboardEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api");
+        // Every route in this group is manager-only. The check lives in one filter on the group,
+        // not in each handler, so a route added here later cannot forget it.
+        var group = app.MapGroup("/api").AddEndpointFilter<RequireManagerFilter>();
 
-        group.MapGet("/dashboard", async (HttpContext context, HelpdeskDbContext db, CancellationToken ct) =>
+        group.MapGet("/dashboard", async (HelpdeskDbContext db, TimeProvider clock, CancellationToken ct) =>
         {
-            var actor = ActorMiddleware.Current(context);
-            if (actor is null)
-            {
-                return Results.Json(new { error = "Unauthenticated", message = $"Supply a known user in the {ActorMiddleware.HeaderName} header." }, statusCode: StatusCodes.Status401Unauthorized);
-            }
-
-            if (actor.Role != UserRole.TeamLead)
-            {
-                return Results.Json(new { error = "Forbidden", message = "Manager dashboard access is restricted to the IT Manager." }, statusCode: StatusCodes.Status403Forbidden);
-            }
-
             var tickets = await db.Tickets.Include(t => t.AssignedTechnician).ToListAsync(ct);
-            return Results.Ok(BuildMetrics(tickets));
+            return Results.Ok(BuildMetrics(tickets, clock.GetUtcNow().UtcDateTime));
         });
 
-        group.MapGet("/dashboard/tickets", async (HttpContext context, HelpdeskDbContext db, string? status, string? priority, string? assignee, CancellationToken ct) =>
+        // USER STORY: filter tickets by status, priority and assignee (IT manager).
+        // The table and the CSV export share TicketFilter, so they always return the same tickets.
+        group.MapGet("/dashboard/tickets", async (HelpdeskDbContext db, TimeProvider clock, string? status, string? priority, string? assignee, CancellationToken ct) =>
         {
-            var actor = ActorMiddleware.Current(context);
-            if (actor is null)
+            if (!TicketFilter.TryParse(status, priority, assignee, out var filter, out var error))
             {
-                return Results.Json(new { error = "Unauthenticated", message = $"Supply a known user in the {ActorMiddleware.HeaderName} header." }, statusCode: StatusCodes.Status401Unauthorized);
+                return InvalidFilter(error);
             }
 
-            if (actor.Role != UserRole.TeamLead)
-            {
-                return Results.Json(new { error = "Forbidden", message = "Manager dashboard access is restricted to the IT Manager." }, statusCode: StatusCodes.Status403Forbidden);
-            }
+            var tickets = await FilteredTicketsAsync(db, filter, ct);
 
-            var tickets = await db.Tickets.Include(t => t.AssignedTechnician).ToListAsync(ct);
-            
-            // Apply filters
-            if (!string.IsNullOrEmpty(status) && status != "All")
-            {
-                var statusEnum = FromUiStatus(status);
-                tickets = tickets.Where(t => t.Status == statusEnum).ToList();
-            }
-
-            if (!string.IsNullOrEmpty(priority) && priority != "All")
-            {
-                if (Enum.TryParse<TicketPriority>(priority, out var priorityEnum))
-                {
-                    tickets = tickets.Where(t => t.Priority == priorityEnum).ToList();
-                }
-            }
-
-            if (!string.IsNullOrEmpty(assignee) && assignee != "All")
-            {
-                tickets = tickets.Where(t => t.AssignedTechnician?.Name == assignee).ToList();
-            }
-
-            return Results.Ok(tickets.Select(MapTicketRow).ToList());
+            // No match is a normal answer: 200 with an empty list, never an error.
+            var now = clock.GetUtcNow().UtcDateTime;
+            return Results.Ok(tickets.Select(t => MapTicketRow(t, now)).ToList());
         });
 
-        group.MapGet("/dashboard/export", async (HttpContext context, HelpdeskDbContext db, string? status, string? priority, string? assignee, CancellationToken ct) =>
+        group.MapGet("/dashboard/export", async (HelpdeskDbContext db, TimeProvider clock, string? status, string? priority, string? assignee, CancellationToken ct) =>
         {
-            var actor = ActorMiddleware.Current(context);
-            if (actor is null)
+            if (!TicketFilter.TryParse(status, priority, assignee, out var filter, out var error))
             {
-                return Results.Json(new { error = "Unauthenticated", message = $"Supply a known user in the {ActorMiddleware.HeaderName} header." }, statusCode: StatusCodes.Status401Unauthorized);
+                return InvalidFilter(error);
             }
 
-            if (actor.Role != UserRole.TeamLead)
-            {
-                return Results.Json(new { error = "Forbidden", message = "Manager dashboard access is restricted to the IT Manager." }, statusCode: StatusCodes.Status403Forbidden);
-            }
-
-            var tickets = await db.Tickets.Include(t => t.AssignedTechnician).ToListAsync(ct);
-            
-            // Apply filters
-            if (!string.IsNullOrEmpty(status) && status != "All")
-            {
-                var statusEnum = FromUiStatus(status);
-                tickets = tickets.Where(t => t.Status == statusEnum).ToList();
-            }
-
-            if (!string.IsNullOrEmpty(priority) && priority != "All")
-            {
-                if (Enum.TryParse<TicketPriority>(priority, out var priorityEnum))
-                {
-                    tickets = tickets.Where(t => t.Priority == priorityEnum).ToList();
-                }
-            }
-
-            if (!string.IsNullOrEmpty(assignee) && assignee != "All")
-            {
-                tickets = tickets.Where(t => t.AssignedTechnician?.Name == assignee).ToList();
-            }
-
-            var csv = BuildCsv(tickets);
+            var tickets = await FilteredTicketsAsync(db, filter, ct);
+            var csv = BuildCsv(tickets, clock.GetUtcNow().UtcDateTime);
             return Results.File(Encoding.UTF8.GetBytes(csv), "text/csv; charset=utf-8", "airport-helpdesk-dashboard.csv");
         });
 
-        group.MapPost("/demo/performance-data", async (HttpContext context, HelpdeskDbContext db, int? count, CancellationToken ct) =>
+        group.MapPost("/demo/performance-data", async (HelpdeskDbContext db, int? count, CancellationToken ct) =>
         {
-            var actor = ActorMiddleware.Current(context);
-            if (actor is null)
-            {
-                return Results.Json(new { error = "Unauthenticated", message = $"Supply a known user in the {ActorMiddleware.HeaderName} header." }, statusCode: StatusCodes.Status401Unauthorized);
-            }
-
-            if (actor.Role != UserRole.TeamLead)
-            {
-                return Results.Json(new { error = "Forbidden", message = "Manager dashboard access is restricted to the IT Manager." }, statusCode: StatusCodes.Status403Forbidden);
-            }
-
             var requested = Math.Clamp(count ?? 500, 1, 2000);
             var start = DateTime.UtcNow;
             var rows = Enumerable.Range(0, requested).Select((_, index) => new Ticket
@@ -163,19 +75,8 @@ public static class DashboardEndpoints
             return Results.Ok(new { message = $"Generated {requested} demo tickets.", count = requested, databaseSeedMilliseconds = Math.Round(elapsedMs, 2) });
         });
 
-        group.MapDelete("/demo/performance-data", async (HttpContext context, HelpdeskDbContext db, CancellationToken ct) =>
+        group.MapDelete("/demo/performance-data", async (HelpdeskDbContext db, CancellationToken ct) =>
         {
-            var actor = ActorMiddleware.Current(context);
-            if (actor is null)
-            {
-                return Results.Json(new { error = "Unauthenticated", message = $"Supply a known user in the {ActorMiddleware.HeaderName} header." }, statusCode: StatusCodes.Status401Unauthorized);
-            }
-
-            if (actor.Role != UserRole.TeamLead)
-            {
-                return Results.Json(new { error = "Forbidden", message = "Manager dashboard access is restricted to the IT Manager." }, statusCode: StatusCodes.Status403Forbidden);
-            }
-
             var count = await db.Tickets.CountAsync(ct);
             if (count > 0)
             {
@@ -187,10 +88,22 @@ public static class DashboardEndpoints
         });
     }
 
-    private static object BuildMetrics(List<Ticket> tickets)
+    /// <summary>The filter runs in the database query, so only matching tickets are loaded.</summary>
+    private static Task<List<Ticket>> FilteredTicketsAsync(HelpdeskDbContext db, TicketFilter filter, CancellationToken ct) =>
+        filter.Apply(db.Tickets.Include(t => t.AssignedTechnician).AsNoTracking())
+            .OrderByDescending(t => t.CreatedAt)
+            .ToListAsync(ct);
+
+    private static IResult InvalidFilter(string? message) =>
+        Results.Json(
+            new { error = "InvalidFilter", message = message ?? "The filter values are not valid." },
+            statusCode: StatusCodes.Status400BadRequest);
+
+    private static object BuildMetrics(List<Ticket> tickets, DateTime nowUtc)
     {
         var openBacklog = tickets.Count(t => t.Status != TicketStatus.Closed && t.Status != TicketStatus.Resolved);
-        var overdue = tickets.Count(t => t.Status != TicketStatus.Closed && t.Status != TicketStatus.Resolved && t.Priority == TicketPriority.Critical);
+        // USER STORY: SLA breach flagging. Overdue = open longer than the priority's SLA window (SlaPolicy).
+        var overdue = tickets.Count(t => SlaPolicy.IsOverdue(t, nowUtc));
         var resolved = tickets.Where(t => t.ResolvedAt is not null).ToList();
         var avgMinutes = resolved.Count == 0 ? 0 : resolved.Average(t => (t.ResolvedAt!.Value - t.CreatedAt).TotalMinutes);
 
@@ -214,7 +127,7 @@ public static class DashboardEndpoints
         };
     }
 
-    private static object MapTicketRow(Ticket ticket) => new
+    private static object MapTicketRow(Ticket ticket, DateTime nowUtc) => new
     {
         id = Math.Abs(ticket.Id.GetHashCode()),
         terminal = ticket.AssignedTechnicianId is null ? "T-01" : "T-03",
@@ -238,7 +151,7 @@ public static class DashboardEndpoints
         attachmentOriginalName = (string?)null,
         attachmentContentType = (string?)null,
         attachmentSize = (long?)null,
-        slaOverdue = ticket.Priority == TicketPriority.Critical && ticket.Status != TicketStatus.Closed && ticket.Status != TicketStatus.Resolved,
+        slaOverdue = SlaPolicy.IsOverdue(ticket, nowUtc),
         isPerformanceTest = false,
     };
 
@@ -248,15 +161,9 @@ public static class DashboardEndpoints
         _ => status.ToString(),
     };
 
-    private static TicketStatus FromUiStatus(string uiStatus) => uiStatus switch
-    {
-        "WaitingOnUser" => TicketStatus.PendingEmployeeResponse,
-        _ => Enum.TryParse<TicketStatus>(uiStatus, out var parsed) ? parsed : TicketStatus.New,
-    };
-
     private static string ToUiPriority(TicketPriority priority) => priority.ToString();
 
-    private static string BuildCsv(List<Ticket> tickets)
+    private static string BuildCsv(List<Ticket> tickets, DateTime nowUtc)
     {
         var lines = new List<string>
         {
@@ -275,7 +182,7 @@ public static class DashboardEndpoints
                 ticket.Status.ToString(),
                 ticket.AssignedTechnician?.Name ?? "Unassigned",
                 ticket.SubmitterName,
-                (ticket.Priority == TicketPriority.Critical && ticket.Status != TicketStatus.Closed && ticket.Status != TicketStatus.Resolved).ToString(),
+                SlaPolicy.IsOverdue(ticket, nowUtc).ToString(),
             ]));
         }
 
