@@ -2,7 +2,10 @@ import { vi } from 'vitest'
 
 export type Call = { url: string; method: string; headers: Headers; body: string | undefined }
 
-type Handler = (call: Call) => { status: number; body?: unknown } | undefined
+/** `text` sends a raw body (e.g. a CSV file) instead of JSON; `headers` adds response headers. */
+export type Reply = { status: number; body?: unknown; text?: string; headers?: Record<string, string> }
+
+type Handler = (call: Call) => Reply | undefined
 
 /**
  * Replaces fetch with a small in-memory router so client tests run without the ASP.NET API.
@@ -20,6 +23,7 @@ export function installFakeServer(handler: Handler) {
     calls.push(call)
     const reply = handler(call) ?? defaultReply(call)
     if (reply.status === 204) return new Response(null, { status: 204 })
+    if (reply.text !== undefined) return new Response(reply.text, { status: reply.status, headers: reply.headers })
     return new Response(JSON.stringify(reply.body ?? {}), {
       status: reply.status,
       headers: { 'Content-Type': 'application/json' },
@@ -29,7 +33,7 @@ export function installFakeServer(handler: Handler) {
   return { calls, fetchMock }
 }
 
-function defaultReply(call: Call): { status: number; body?: unknown } {
+function defaultReply(call: Call): Reply {
   if (call.url.includes('/api/dashboard/tickets')) return { status: 200, body: [] }
   if (call.url.includes('/api/dashboard')) {
     return { status: 200, body: { openBacklog: 0, averageResolutionMinutes: 0, overdueCount: 0, recurringIssueCategory: 'Incident', recurringIssueCount: 0, totalTickets: 0 } }
