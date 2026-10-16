@@ -93,6 +93,8 @@ jobs:
           # Manager-only dashboard: every route in the group refuses an anonymous caller.
           expect_status 401 "Dashboard tickets refuse an anonymous caller" "$base/api/dashboard/tickets"
           expect_status 401 "Dashboard CSV export refuses an anonymous caller" "$base/api/dashboard/export"
+          expect_status 401 "Dashboard summary export refuses an anonymous caller" "$base/api/dashboard/export/summary"
+          expect_status 401 "Dashboard by-priority export refuses an anonymous caller" "$base/api/dashboard/export/by-priority"
           expect_status 401 "Generating dashboard demo data refuses an anonymous caller" -X POST "$base/api/demo/performance-data"
           expect_status 401 "Deleting dashboard demo data refuses an anonymous caller" -X DELETE "$base/api/demo/performance-data"
           expect_status 400 "Sign-in with blank credentials is rejected" -X POST -H "Content-Type: application/json" -d '{"username":"","password":""}' "$base/api/auth/login"

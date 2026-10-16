@@ -125,6 +125,8 @@ describe('Dashboard filters — AC2 empty result', () => {
 
   it('FILT-C04 a technician with no tickets can be picked, and gives the empty message', async () => {
     const { user } = await openDashboard()
+    // The roster loads after the dashboard; wait for it rather than racing it (this test was flaky).
+    await screen.findByRole('option', { name: 'Priya Shah' })
 
     await user.selectOptions(screen.getByLabelText('Assignee'), 'Priya Shah')
 

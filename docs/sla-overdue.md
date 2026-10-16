@@ -105,9 +105,8 @@ which is the defect this story removes. Its fixture ticket is now 5 hours old, s
 **SLA tests: 27/27 passing** (13 Oct 2026, on Jon's Windows machine, .NET 10, run filtered to
 `SlaPolicyTests` and `SlaOverdueEndpointTests`, 2.3 s).
 
-**Full suite: not yet run.** An earlier full `dotnet test` run ended when the PC crashed, before any results
-were written; the cause is not known. Expected total if the previous 128 still pass: 155. DASH-B09 (the changed
-existing test) runs only in the full suite.
+**Full suite: 155/155 passing** (13 Oct 2026, same machine, 2.4 s): the previous 128 plus the 27 new runs,
+including the changed DASH-B09. An earlier full run had ended when the PC crashed; the cause was not identified.
 
 ## Known limitations
 

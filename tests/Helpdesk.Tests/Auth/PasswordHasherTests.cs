@@ -54,7 +54,12 @@ public sealed class PasswordHasherTests
     public void Hash_RecordsIterationCount_AndDefaultMeetsOwaspFigure()
     {
         Assert.IsTrue(_hasher.Hash("x").StartsWith("PBKDF2-SHA256$1000$", StringComparison.Ordinal));
-        Assert.IsTrue(PasswordHasher.DefaultIterations >= 600_000);
+        // Check the production default through behaviour, not by comparing two constants
+        // (that comparison is folded at compile time - MSTEST0032). A hasher built with no
+        // arguments must actually write at least the OWASP figure into what it stores.
+        var stored = new PasswordHasher().Hash("x");
+        var iterations = int.Parse(stored.Split('$')[1], System.Globalization.CultureInfo.InvariantCulture);
+        Assert.IsTrue(iterations >= 600_000, $"Default hasher stored {iterations} iterations; OWASP minimum is 600,000.");
     }
 
     [TestMethod] // AUTH-B06

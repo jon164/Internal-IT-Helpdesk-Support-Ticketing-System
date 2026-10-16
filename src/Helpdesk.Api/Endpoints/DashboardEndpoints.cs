@@ -1,9 +1,9 @@
 namespace Helpdesk.Api.Endpoints;
 
-using System.Text;
 using Helpdesk.Api.Models;
 using Helpdesk.Api.Security;
 using Helpdesk.Core.Domain;
+using Helpdesk.Core.Reporting;
 using Helpdesk.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -45,8 +45,25 @@ public static class DashboardEndpoints
             }
 
             var tickets = await FilteredTicketsAsync(db, filter, ct);
-            var csv = BuildCsv(tickets, clock.GetUtcNow().UtcDateTime);
-            return Results.File(Encoding.UTF8.GetBytes(csv), "text/csv; charset=utf-8", "airport-helpdesk-dashboard.csv");
+            var now = clock.GetUtcNow().UtcDateTime;
+            return CsvFile(BuildCsv(tickets, now), DashboardExport.FileName("tickets", now));
+        });
+
+        // USER STORY: export the dashboard summary (IT manager). The manager picks which file to
+        // download. Both summary files cover every ticket, exactly like the summary cards, so they
+        // take no filter parameters. Same manager-only group, so the same 401/403 rules apply.
+        group.MapGet("/dashboard/export/summary", async (HelpdeskDbContext db, TimeProvider clock, CancellationToken ct) =>
+        {
+            var tickets = await db.Tickets.AsNoTracking().ToListAsync(ct);
+            var now = clock.GetUtcNow().UtcDateTime;
+            return CsvFile(DashboardExport.SummaryCsv(DashboardSummary.From(tickets, now), now), DashboardExport.FileName("summary", now));
+        });
+
+        group.MapGet("/dashboard/export/by-priority", async (HelpdeskDbContext db, TimeProvider clock, CancellationToken ct) =>
+        {
+            var tickets = await db.Tickets.AsNoTracking().ToListAsync(ct);
+            var now = clock.GetUtcNow().UtcDateTime;
+            return CsvFile(DashboardExport.ByPriorityCsv(DashboardSummary.ByPriority(tickets, now)), DashboardExport.FileName("by-priority", now));
         });
 
         group.MapPost("/demo/performance-data", async (HelpdeskDbContext db, int? count, CancellationToken ct) =>
@@ -94,36 +111,27 @@ public static class DashboardEndpoints
             .OrderByDescending(t => t.CreatedAt)
             .ToListAsync(ct);
 
+    private static IResult CsvFile(string document, string fileName) =>
+        Results.File(Csv.ToBytes(document), "text/csv; charset=utf-8", fileName);
+
     private static IResult InvalidFilter(string? message) =>
         Results.Json(
             new { error = "InvalidFilter", message = message ?? "The filter values are not valid." },
             statusCode: StatusCodes.Status400BadRequest);
 
+    /// <summary>The summary cards. Figures come from <see cref="DashboardSummary"/>, the same source as the CSV exports.</summary>
     private static object BuildMetrics(List<Ticket> tickets, DateTime nowUtc)
     {
-        var openBacklog = tickets.Count(t => t.Status != TicketStatus.Closed && t.Status != TicketStatus.Resolved);
-        // USER STORY: SLA breach flagging. Overdue = open longer than the priority's SLA window (SlaPolicy).
-        var overdue = tickets.Count(t => SlaPolicy.IsOverdue(t, nowUtc));
-        var resolved = tickets.Where(t => t.ResolvedAt is not null).ToList();
-        var avgMinutes = resolved.Count == 0 ? 0 : resolved.Average(t => (t.ResolvedAt!.Value - t.CreatedAt).TotalMinutes);
-
-        var categoryCounts = tickets
-            .GroupBy(t => t.Type)
-            .OrderByDescending(g => g.Count())
-            .ThenBy(g => g.Key)
-            .ToList();
-
-        var category = categoryCounts.Count > 0 ? categoryCounts[0].Key.ToString() : "Incident";
-        var count = categoryCounts.Count > 0 ? categoryCounts[0].Count() : 0;
-
+        var summary = DashboardSummary.From(tickets, nowUtc);
         return new
         {
-            openBacklog,
-            averageResolutionMinutes = Math.Round(avgMinutes, 2),
-            overdueCount = overdue,
-            recurringIssueCategory = category,
-            recurringIssueCount = count,
-            totalTickets = tickets.Count,
+            openBacklog = summary.OpenBacklog,
+            averageResolutionMinutes = summary.AverageResolutionMinutes ?? 0,
+            overdueCount = summary.OverdueCount,
+            // "None" rather than a made-up "Incident" when there are no tickets at all.
+            recurringIssueCategory = summary.MostCommonCategory?.ToString() ?? "None",
+            recurringIssueCount = summary.MostCommonCategoryCount,
+            totalTickets = summary.TotalTickets,
         };
     }
 
@@ -163,18 +171,13 @@ public static class DashboardEndpoints
 
     private static string ToUiPriority(TicketPriority priority) => priority.ToString();
 
-    private static string BuildCsv(List<Ticket> tickets, DateTime nowUtc)
-    {
-        var lines = new List<string>
-        {
-            "id,terminal,area,systemType,priority,status,assignee,reporterName,slaOverdue",
-        };
-
-        foreach (var ticket in tickets)
-        {
-            lines.Add(string.Join(",",
-            [
-                Math.Abs(ticket.Id.GetHashCode()).ToString(),
+    /// <summary>The ticket list file. Goes through <see cref="Csv"/>, so names with commas or quotes stay in one column.</summary>
+    private static string BuildCsv(List<Ticket> tickets, DateTime nowUtc) =>
+        Csv.Document(
+            ["id", "terminal", "area", "systemType", "priority", "status", "assignee", "reporterName", "slaOverdue"],
+            tickets.Select(ticket => new string?[]
+            {
+                Math.Abs(ticket.Id.GetHashCode()).ToString(System.Globalization.CultureInfo.InvariantCulture),
                 ticket.AssignedTechnicianId is null ? "T-01" : "T-03",
                 ticket.AssignedTechnicianId is null ? "Operations" : "IT Services",
                 ticket.Type.ToString(),
@@ -183,9 +186,5 @@ public static class DashboardEndpoints
                 ticket.AssignedTechnician?.Name ?? "Unassigned",
                 ticket.SubmitterName,
                 SlaPolicy.IsOverdue(ticket, nowUtc).ToString(),
-            ]));
-        }
-
-        return string.Join(Environment.NewLine, lines);
-    }
+            }));
 }

@@ -1936,3 +1936,15 @@ th {
     font-size: 13px;
   }
 }
+
+/* USER STORY: export the dashboard summary — the panel where the manager picks a file. */
+.export-panel { margin-bottom: 1.25rem; }
+.export-panel h3 { margin: 0 0 0.75rem; }
+.export-choices { border: 0; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.export-choices legend { font-weight: 700; margin-bottom: 0.5rem; padding: 0; }
+.export-choice { display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.75rem; border: 2px solid var(--border); background: var(--surface-2); cursor: pointer; }
+.export-choice:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
+.export-choice input { margin-top: 0.2rem; accent-color: var(--primary); }
+.export-choice span { display: grid; gap: 0.2rem; }
+.export-choice small { color: var(--muted); }
+.export-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-top: 1rem; }

@@ -2,6 +2,7 @@ import type {
   CreateTicketRequest,
   DashboardFilters,
   DashboardMetrics,
+  ExportKind,
   FlightRecord,
   LoginResponse,
   Role,
@@ -85,6 +86,20 @@ function qs(values: Record<string, string | number | boolean | undefined>) {
     if (value !== undefined && value !== '' && value !== 'All') params.set(key, String(value))
   })
   return params.size ? `?${params.toString()}` : ''
+}
+
+/** File name from the server's Content-Disposition header (readable when the API is same-origin). */
+export function downloadName(header: string | null): string | undefined {
+  const match = header?.match(/filename="?([^";]+)"?/i)
+  const name = match?.[1]?.trim()
+  // Only plain names: never let a header steer the download into a path.
+  return name && /^[\w.-]+$/.test(name) ? name : undefined
+}
+
+function fallbackName(kind: ExportKind) {
+  const d = new Date()
+  const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return `airport-helpdesk-${kind}-${date}.csv`
 }
 
 export const api = {
@@ -180,24 +195,31 @@ export const api = {
     return request<Ticket[]>(`/api/dashboard/tickets${qs(filters)}`, {}, role)
   },
 
-  async exportDashboard(filters: DashboardFilters, role: Role) {
-    console.debug('[API] GET /api/dashboard/export', { role })
-    const response = await fetch(`${API_BASE}/api/dashboard/export${qs(filters)}`, {
-      headers: authHeaders(),
-    })
+  /**
+   * Downloads one dashboard export and returns the file name used. Filters only apply to the
+   * ticket list; the summary files cover every ticket, like the summary cards.
+   */
+  async exportDashboard(kind: ExportKind, filters: DashboardFilters, role: Role): Promise<string> {
+    const path = kind === 'tickets' ? `/api/dashboard/export${qs(filters)}` : `/api/dashboard/export/${kind}`
+    console.debug(`[API] GET ${path}`, { role })
+    const response = await fetch(`${API_BASE}${path}`, { headers: authHeaders() })
     if (!response.ok) {
       const body = await response.json().catch(() => ({})) as { message?: string }
+      if (response.status === 401 && sessionToken) unauthorizedHandler?.()
       throw new ApiError(body.message ?? 'Export failed.', response.status)
     }
+    const fileName = downloadName(response.headers.get('Content-Disposition')) ?? fallbackName(kind)
     const blob = await response.blob()
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = url
-    anchor.download = 'airport-helpdesk-dashboard.csv'
+    anchor.download = fileName
     document.body.appendChild(anchor)
     anchor.click()
     anchor.remove()
-    URL.revokeObjectURL(url)
+    // Revoking in the same tick can cancel the download in some browsers.
+    setTimeout(() => URL.revokeObjectURL(url), 0)
+    return fileName
   },
 
   seedPerformanceData(count: number, role: Role) {

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { ExportPanel } from '../components/ExportPanel'
 import { SummaryCard } from '../components/SummaryCard'
 import { api, ApiError } from '../services/api'
-import type { DashboardFilters, DashboardMetrics, Notice, Role, Ticket } from '../types'
-import { PRIORITY_OPTIONS, STATUS_DISPLAY, STATUS_OPTIONS } from '../utils'
+import type { DashboardFilters, DashboardMetrics, ExportKind, Notice, Role, Ticket } from '../types'
+import { EXPORT_CHOICES, PRIORITY_OPTIONS, STATUS_DISPLAY, STATUS_OPTIONS } from '../utils'
 
 /**
  * USER STORY: Manager-only dashboard.
@@ -35,6 +36,8 @@ export function DashboardPage({ role, setNotice }: { role: Role; setNotice: (not
   }, [technicianNames, tickets, filters.assignee])
   const filtering = filters.status !== 'All' || filters.priority !== 'All' || filters.assignee !== 'All'
   const deniedHeading = useRef<HTMLHeadingElement>(null)
+  const exportButton = useRef<HTMLButtonElement>(null)
+  const [exportOpen, setExportOpen] = useState(false)
 
   useEffect(() => { void load() }, [role, filters.status, filters.priority, filters.assignee])
 
@@ -54,6 +57,7 @@ export function DashboardPage({ role, setNotice }: { role: Role; setNotice: (not
 
   /** Any 403 — on load or on a later action — removes every figure already on screen. */
   function deny() {
+    setExportOpen(false)
     setMetrics(null)
     setTickets([])
     setPerformanceMessage('')
@@ -72,6 +76,25 @@ export function DashboardPage({ role, setNotice }: { role: Role; setNotice: (not
     } catch (error) {
       setMetrics(null); setTickets([])
       handleError(error, 'Dashboard failed to load.')
+    }
+  }
+
+  function closeExport() {
+    setExportOpen(false)
+    // Return focus to the button that opened the panel (after React removes the panel).
+    setTimeout(() => exportButton.current?.focus(), 0)
+  }
+
+  /** Resolves true when the file was downloaded, so the panel closes; false keeps it open to retry. */
+  async function exportFile(kind: ExportKind) {
+    const label = EXPORT_CHOICES.find(c => c.kind === kind)?.label ?? 'Export'
+    try {
+      const fileName = await api.exportDashboard(kind, filters, role)
+      setNotice({ type: 'success', text: `${label} downloaded as ${fileName}.` })
+      return true
+    } catch (error) {
+      handleError(error, 'Export failed.')
+      return false
     }
   }
 
@@ -105,12 +128,13 @@ export function DashboardPage({ role, setNotice }: { role: Role; setNotice: (not
   }
 
   return <>
-    <section className="page-heading"><div><p className="eyebrow">MANAGER ANALYTICS</p><h2>Service health dashboard</h2><p>Backlog, resolution time, SLA risk, recurring issues and filtered export.</p></div><button className="primary-button" onClick={() => api.exportDashboard(filters, role).then(() => setNotice({ type:'success', text:`CSV exported with ${tickets.length} row(s).` })).catch((e: unknown) => handleError(e, 'Export failed.'))}>Export current CSV</button></section>
+    <section className="page-heading"><div><p className="eyebrow">MANAGER ANALYTICS</p><h2>Service health dashboard</h2><p>Backlog, resolution time, SLA risk, recurring issues and filtered export.</p></div><button ref={exportButton} type="button" className="primary-button" aria-expanded={exportOpen} aria-controls="dashboard-export-panel" onClick={() => exportOpen ? closeExport() : setExportOpen(true)}>Export current CSV</button></section>
+    {exportOpen && <ExportPanel ticketRows={tickets.length} onExport={exportFile} onClose={closeExport}/>}
     <section className="summary-grid"><SummaryCard label="Open backlog" value={metrics?.openBacklog ?? '—'} note="Every ticket not Closed"/><SummaryCard label="Average resolution" value={metrics ? `${Math.round(metrics.averageResolutionMinutes)}m` : '—'} note="Resolved ticket average"/><SummaryCard label="Overdue" value={metrics?.overdueCount ?? '—'} note="Outside priority SLA" danger/><SummaryCard label="Recurring issue" value={metrics ? `${metrics.recurringIssueCategory} (${metrics.recurringIssueCount})` : '—'} note="Most common category"/></section>
     <section className="panel"><div className="panel-header dashboard-header"><div><p className="eyebrow">FILTERS</p><h3>Investigate ticket workload</h3></div><div className="performance-actions"><button className="secondary-button" onClick={runPerformance}>Run 500-ticket test</button><button className="text-button" onClick={clearPerformance}>Remove test data</button></div></div>
     {performanceMessage && <div className="performance-message">{performanceMessage}</div>}
     <div className="filter-grid"><label><span>Status</span><select value={filters.status} onChange={e => setFilters(f => ({...f,status:e.target.value}))}><option>All</option>{STATUS_OPTIONS.map(s => <option key={s} value={s}>{STATUS_DISPLAY[s]}</option>)}</select></label><label><span>Priority</span><select value={filters.priority} onChange={e => setFilters(f => ({...f,priority:e.target.value}))}><option>All</option>{PRIORITY_OPTIONS.map(p => <option key={p}>{p}</option>)}</select></label><label><span>Assignee</span><select value={filters.assignee} onChange={e => setFilters(f => ({...f,assignee:e.target.value}))}><option>All</option>{assignees.map(a => <option key={a}>{a}</option>)}</select></label></div>
-    <div className="results-line"><strong role="status" aria-live="polite">{tickets.length} {tickets.length === 1 ? 'result' : 'results'}</strong><span>Filters also apply to CSV export.</span>{filtering && <button type="button" className="text-button" onClick={() => setFilters(NO_FILTERS)}>Clear filters</button>}</div>
+    <div className="results-line"><strong role="status" aria-live="polite">{tickets.length} {tickets.length === 1 ? 'result' : 'results'}</strong><span>Filters also apply to the ticket list export.</span>{filtering && <button type="button" className="text-button" onClick={() => setFilters(NO_FILTERS)}>Clear filters</button>}</div>
     <div className="table-wrap"><table><thead><tr><th>Ticket</th><th>Location</th><th>System</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Passenger</th><th>SLA</th></tr></thead><tbody>{tickets.map(t => <tr key={t.id}><td>#{t.id}</td><td>{t.terminal} / {t.area}</td><td>{t.systemType}</td><td>{t.priority}</td><td>{STATUS_DISPLAY[t.status]}</td><td>{t.assignee}</td><td>{t.passengerImpact ? 'Yes' : 'No'}</td><td>{t.slaOverdue ? <span className="table-overdue">Overdue</span> : 'Within SLA'}</td></tr>)}</tbody></table>{tickets.length === 0 && <div className="empty-state">{filtering
       ? <><strong>No tickets match these filters.</strong><p>Try a different status, priority or assignee, or clear the filters to see every ticket.</p></>
       : <><strong>There are no tickets yet.</strong><p>New tickets will appear here.</p></>}</div>}</div>

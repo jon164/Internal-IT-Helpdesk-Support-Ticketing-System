@@ -110,6 +110,9 @@ export type DashboardMetrics = {
   totalTickets: number
 }
 
+/** Which dashboard file to download: GET /api/dashboard/export, /export/summary or /export/by-priority. */
+export type ExportKind = 'tickets' | 'summary' | 'by-priority'
+
 export type DashboardFilters = {
   status: string
   priority: string

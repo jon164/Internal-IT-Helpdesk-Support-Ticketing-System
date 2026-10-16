@@ -149,7 +149,7 @@ public sealed class DashboardEndpointAccessTests
         var harness = await CreateAsync();
 
         CollectionAssert.AreEquivalent(
-            new[] { "GET /api/dashboard", "GET /api/dashboard/tickets", "GET /api/dashboard/export", "POST /api/demo/performance-data", "DELETE /api/demo/performance-data" },
+            new[] { "GET /api/dashboard", "GET /api/dashboard/tickets", "GET /api/dashboard/export", "GET /api/dashboard/export/summary", "GET /api/dashboard/export/by-priority", "POST /api/demo/performance-data", "DELETE /api/demo/performance-data" },
             harness.Endpoints.Select(e => $"{Method(e)} {e.RoutePattern.RawText}").ToArray());
     }
 
@@ -176,7 +176,7 @@ public sealed class DashboardEndpointAccessTests
         var harness = await CreateAsync();
         var token = await harness.SignInAsync("airport-staff", StaffPassword);
 
-        foreach (var route in new[] { "/api/dashboard", "/api/dashboard/tickets", "/api/dashboard/export" })
+        foreach (var route in new[] { "/api/dashboard", "/api/dashboard/tickets", "/api/dashboard/export", "/api/dashboard/export/summary", "/api/dashboard/export/by-priority" })
         {
             var body = (await harness.CallAsync(harness.Find("GET", route), WithToken(token))).Body;
 
